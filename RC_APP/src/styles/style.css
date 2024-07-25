@@ -1,0 +1,133 @@
+/* style.css */
+.nodes-list {
+  margin: 20px auto;
+  width: 80%;
+  padding: 20px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.nodes-list h2 {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+}
+
+.nodes-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.nodes-list th, .nodes-list td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.nodes-list th {
+  background-color: #f2f2f2;
+}
+
+.nodes-list tbody tr:hover {
+  background-color: #e0e0e0;
+}
+
+.nodes-list button {
+  padding: 8px 16px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.nodes-list button:hover {
+  background-color: #45a049;
+}
+.node-search-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.search-input {
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-right: 10px;
+  width: 300px; /* Adjust width as needed */
+}
+
+.search-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.search-button:hover {
+  background-color: #0056b3;
+}
+.nodes-list {
+  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.filter-container {
+  margin-bottom: 10px;
+}
+
+.filter-container button {
+  padding: 5px 10px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  margin-right: 5px;
+}
+
+.filter-container button.active {
+  background-color: #0056b3;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+table th, table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+table th {
+  background-color: #f2f2f2;
+}
+
+/* style.css */
+.sidebar {
+  width: 200px; /* Adjust width as needed */
+  background-color: #f8f9fa; /* Light background color */
+  padding: 20px;
+  border-right: 1px solid #ccc; /* Border on the right side */
+}
+
+.sidebar-link {
+  color: #333; /* Link text color */
+}
+
+.sidebar-link:hover,
+.sidebar-link:focus {
+  color: #007bff; /* Link text color on hover or focus */
+  text-decoration: none; /* Remove underline on hover or focus */
+}
