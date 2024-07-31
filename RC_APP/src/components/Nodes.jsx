@@ -255,6 +255,15 @@ export default function PersonList() {
                       <TableRow>
                         <TableCell><strong>Address:</strong></TableCell>
                         <TableCell>{selectedNode.adresse}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                        <TableCell><strong>Created at:</strong></TableCell>
+                        <TableCell>{selectedNode.createdAt}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                        <TableCell><strong>Updated at:</strong></TableCell>
+                        <TableCell>{selectedNode.updatedAt}</TableCell>
+                        
                       </TableRow>
                     </TableBody>
                   </Table>

@@ -265,7 +265,14 @@ export default function OrganizationList() {
                         <TableCell><strong>Website:</strong></TableCell>
                         <TableCell>{selectedNode.siteWeb}</TableCell>
                       </TableRow>
-                     
+                      <TableCell><strong>Created at:</strong></TableCell>
+                        <TableCell>{selectedNode.createdAt}</TableCell>
+    
+                        <TableRow>
+                        <TableCell><strong>Updated at:</strong></TableCell>
+                        <TableCell>{selectedNode.updatedAt}</TableCell>
+                        
+                      </TableRow>
                     </TableBody>
                   </Table>
                 </Paper>
