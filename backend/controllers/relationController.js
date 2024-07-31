@@ -145,7 +145,7 @@ async function deleteRelation(req, res) {
 
     try {
         await relation.deleteRelation(relationId, type);
-        res.json({ message: 'Relation supprimée avec succès' }); // Renvoie un message JSON de succès
+        res.json({ message: 'Relation supprimée avec succès' });
     } catch (error) {
         console.error('Erreur lors de la suppression de la relation:', error);
         res.status(500).json({ error: 'Erreur lors de la suppression de la relation' });

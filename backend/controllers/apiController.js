@@ -147,8 +147,10 @@ exports.deleteNode = async (req, res) => {
 
     try {
         if (type === 'personne') {
+            await personne.deletePersRelationships(nodeId);
             await personne.delete(nodeId); 
         } else if (type === 'organization') {
+            await organization.deleteOrgRelationships(nodeId);
             await organization.delete(nodeId); 
         } else {
             throw new Error('Type not supported');
@@ -158,6 +160,27 @@ exports.deleteNode = async (req, res) => {
     } catch (error) {
         console.error('Error deleting node:', error);
         res.status(500).json({ error: 'Error deleting node.', details: error.message });
+    }
+};
+
+exports.checkNodeRelationships = async (req, res) => {
+    const { type, id } = req.params;
+
+    try {
+        let result;
+
+        if (type === 'personne') {
+            result = await personne.checkRelationships(id);
+        } else if (type === 'organization') {
+            result = await organization.checkRelationships(id);
+        } else {
+            return res.status(400).json({ error: 'Invalid type specified.' });
+        }
+
+        res.json(result);
+    } catch (error) {
+        console.error('Error checking node relationships:', error);
+        res.status(500).json({ error: 'Error checking node relationships.', details: error.message });
     }
 };
 

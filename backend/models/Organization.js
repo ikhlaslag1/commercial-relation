@@ -11,7 +11,7 @@ class Organization {
         let query = `
             MATCH (o:Organization)
             WHERE o.nom CONTAINS $name
-            RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email
+            RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry,o.telephone as telephone, o.siteWeb as siteWeb
             SKIP $offset LIMIT $limit
         `;
         try {
@@ -26,7 +26,10 @@ class Organization {
                 nom: record.get('nom') ? record.get('nom').toString() : null,
                 ville: record.get('ville') ? record.get('ville').toString() : null,
                 adresse: record.get('adresse') ? record.get('adresse').toString() : null,
-                email: record.get('email') ? record.get('email').toString() : null
+                industry: record.get('industry') ? record.get('industry').toString() : null,
+                email: record.get('email') ? record.get('email').toString() : null,
+                telephone: record.get('telephone') ? record.get('telephone').toString() : null,
+                siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null
             }));
 
             const countResult = await session.run(`
@@ -153,13 +156,47 @@ class Organization {
         try {
             await session.run(`
                 MATCH (o:Organization)
-                WHERE id(o) = $id
+                WHERE id(o) =  toInteger($id)
                 DELETE o
             `, { id: neo4j.int(id) });
         } finally {
             await session.close();
         }
     }
+    async deleteOrgRelationships (nodeId)  {
+        const session = this.driver.session();
+            const query = `
+                MATCH (p:Organization)-[r]-(others)
+                WHERE id(p) = toInteger($nodeId)
+                DELETE r
+            `;
+           try{ await session.run(query, { nodeId });
+       }finally{
+        await session.close();
+       }
+        };
+
+        async checkRelationships(id) {
+            const session = this.driver.session();
+            try {
+                
+                const result = await session.run(`
+                    MATCH (o:Organization)
+                    WHERE id(o) = toInteger($id)
+                    OPTIONAL MATCH (o)-[r]->(others)  
+                    OPTIONAL MATCH (o)<-[r]-(others)  
+                    RETURN count(r) AS relationshipsCount
+                `, { id });
+    
+                const relationshipsCount = result.records[0].get('relationshipsCount').toNumber();
+    
+                return {
+                    hasRelationships: relationshipsCount > 0
+                };
+            } finally {
+                await session.close();
+            }
+        }
 }
 
 module.exports = Organization;

@@ -149,6 +149,7 @@ class Personne {
     async delete(id) {
         const session = this.driver.session();
         try {
+            await this.deletePersRelationships(id); 
             await session.run(`
                 MATCH (n:Personne)
                 WHERE id(n) = toInteger($id)
@@ -158,6 +159,39 @@ class Personne {
             await session.close();
         }
     }
+   async deletePersRelationships (nodeId)  {
+    const session = this.driver.session();
+        const query = `
+            MATCH (p:Personne)-[r]-(other)
+            WHERE id(p) = toInteger($nodeId)
+            DELETE r
+        `;
+       try{ await session.run(query, { nodeId });
+   }finally{
+    await session.close();
+   }
+    };
+    async checkRelationships(id) {
+        const session = this.driver.session();
+        try {
+            const result = await session.run(`
+                MATCH (p:Personne)
+                WHERE id(p) = toInteger($id)
+                OPTIONAL MATCH (p)-[r]->(others)  
+                OPTIONAL MATCH (p)<-[r]-(others)  
+                RETURN count(r) AS relationshipsCount
+            `, { id });
+
+            const relationshipsCount = result.records[0].get('relationshipsCount').toNumber();
+
+            return {
+                hasRelationships: relationshipsCount > 0
+            };
+        } finally {
+            await session.close();
+        }
+    }
+    
 }
 
 module.exports = Personne;

@@ -10,6 +10,7 @@ router.get('/:type/:id', apiController.getNodeById);
 router.post('/add', apiController.addNode);
 router.put('/edit/:id', apiController.editNode);
 router.delete('/delete/:type/:id', apiController.deleteNode);
+router.get('/checkRelationships/:type/:id', apiController.checkNodeRelationships);
 router.get('/search', apiController.searchNodesByName);
 
 module.exports = router;
