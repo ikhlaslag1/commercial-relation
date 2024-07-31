@@ -7,7 +7,8 @@ router.get('/', relationController.getAllRelations);
 router.post('/add', relationController.addRelation);
 router.post('/:id', relationController.getRelationById);
 router.put('/update/:id', relationController.updateRelation);
-router.delete('/delete/:id', relationController.deleteRelation);
+router.delete('/delete/:relationId', relationController.deleteRelation);
+
 
 router.get('/allBetween/:nodeName1/:nodeName2', relationController.getAllRelationsBetweenNodes);
 router.get('/paths/:nodeName1/:nodeName2', relationController.getAllPaths);

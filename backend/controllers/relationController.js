@@ -138,19 +138,19 @@ const getAllPathsDFS = async (req, res) => {
 };
 
 
-
-
-async function deleteRelation(req, res) {
-    const { relationId, type } = req.params;
-
+const deleteRelation= async(req, res)=> {
+    const { relationId } = req.params; 
+    const { type } = req.body; 
+  
     try {
-        await relation.deleteRelation(relationId, type);
-        res.json({ message: 'Relation supprimée avec succès' });
+      await relation.deleteRelation(relationId, type);
+      res.json({ message: 'Relation supprimée avec succès' });
     } catch (error) {
-        console.error('Erreur lors de la suppression de la relation:', error);
-        res.status(500).json({ error: 'Erreur lors de la suppression de la relation' });
+      console.error('Erreur lors de la suppression de la relation:', error);
+      res.status(500).json({ error: 'Erreur lors de la suppression de la relation' });
     }
-}
+  }
+  
 
 module.exports = {
     getAllRelations,

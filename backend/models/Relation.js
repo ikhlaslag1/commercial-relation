@@ -163,21 +163,23 @@ class Relation {
             const result = await session.run(`
                 MATCH (n)-[r]->(m)
                 WHERE id(n) = toInteger($nodeId)
-                RETURN type(r) AS relationType, id(m) AS relatedNodeId, m.nom AS relatedNodeName, r AS relationshipProperties
+                RETURN type(r) AS relationType, id(r) AS relationId, id(m) AS relatedNodeId, m.nom AS relatedNodeName, r AS relationshipProperties
             `, { nodeId });
-
+    
             const relations = result.records.map(record => ({
                 relationType: record.get('relationType').toString(),
+                relationId: record.get('relationId').toString(),
                 relatedNodeId: record.get('relatedNodeId').toString(),
                 relatedNodeName: record.get('relatedNodeName') ? record.get('relatedNodeName').toString() : null,
                 relationshipProperties: record.get('relationshipProperties').properties
             }));
-
+    
             return relations.length > 0 ? relations : null;
         } finally {
             await session.close();
         }
     }
+    
     
     async deleteRelation(relationId, type) {
         try {
