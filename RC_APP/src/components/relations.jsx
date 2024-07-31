@@ -41,7 +41,7 @@ const NodeDetails = () => {
   };
 
   const handleEditRelation = (relation) => {
-    navigate(`/edit-relation/${relation.relationId}`);
+    navigate(`/EditRelation/${relation.relationId}`);
   };
 
   const handleOpenConfirmDialog = (relation) => {
@@ -80,18 +80,19 @@ const NodeDetails = () => {
 
     const props = relation.relationshipProperties;
 
-    switch (relation.relationType) {
-      case 'TRAVAILLE':
-        return (
-          <>
-            <TableRow>
-              <TableCell><strong>Position:</strong></TableCell>
-              <TableCell>{props.position}</TableCell>
-            </TableRow>
-          </>
-        );
-      case 'ETUDE':
-        return (
+    return (
+      <>
+        <TableRow>
+          <TableCell><strong>Relation ID:</strong></TableCell>
+          <TableCell>{relation.relationId}</TableCell>
+        </TableRow>
+        {relation.relationType === 'TRAVAILLE' && (
+          <TableRow>
+            <TableCell><strong>Position:</strong></TableCell>
+            <TableCell>{props.position}</TableCell>
+          </TableRow>
+        )}
+        {relation.relationType === 'ETUDE' && (
           <>
             <TableRow>
               <TableCell><strong>Field:</strong></TableCell>
@@ -102,18 +103,14 @@ const NodeDetails = () => {
               <TableCell>{props.niveau}</TableCell>
             </TableRow>
           </>
-        );
-      case 'FAMILLE':
-        return (
-          <>
-            <TableRow>
-              <TableCell><strong>Type:</strong></TableCell>
-              <TableCell>{props.type}</TableCell>
-            </TableRow>
-          </>
-        );
-      case 'COLLABORATION':
-        return (
+        )}
+        {relation.relationType === 'FAMILLE' && (
+          <TableRow>
+            <TableCell><strong>Type:</strong></TableCell>
+            <TableCell>{props.type}</TableCell>
+          </TableRow>
+        )}
+        {relation.relationType === 'COLLABORATION' && (
           <>
             <TableRow>
               <TableCell><strong>Project:</strong></TableCell>
@@ -124,10 +121,9 @@ const NodeDetails = () => {
               <TableCell>{props.role}</TableCell>
             </TableRow>
           </>
-        );
-      default:
-        return null;
-    }
+        )}
+      </>
+    );
   };
 
   return (
@@ -145,14 +141,14 @@ const NodeDetails = () => {
                     <TableCell><strong>With:</strong></TableCell>
                     <TableCell>{relation.relatedNodeName}</TableCell>
                     <TableCell>
+                      <IconButton onClick={() => handleViewRelationDetails(relation)} style={{ color: "green" }}>
+                        <InfoIcon />
+                      </IconButton>
                       <IconButton onClick={() => handleEditRelation(relation)} color="primary">
                         <EditIcon />
                       </IconButton>
                       <IconButton onClick={() => handleOpenConfirmDialog(relation)} color="error">
                         <DeleteIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleViewRelationDetails(relation)} style={{ color: "green" }}>
-                        <InfoIcon />
                       </IconButton>
                     </TableCell>
                   </TableRow>

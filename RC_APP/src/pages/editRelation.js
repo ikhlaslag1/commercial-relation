@@ -1,15 +1,15 @@
 import React from 'react';
 import Sidenav from "../components/Sidenav";
 import Box from '@mui/material/Box';
-import NodeDetails from "../components/Details"; 
+import EditRelation from "../components/EditRelation"; 
 
-export default function Details() {
+export default function editNode() {
   return (
     <>
       <Box sx={{ display: 'flex' }}>
         <Sidenav/>
         <Box sx={{ flexGrow: 1, p: 3 }}>
-          <NodeDetails />
+          <EditRelation />
         </Box>
       </Box>
     </>

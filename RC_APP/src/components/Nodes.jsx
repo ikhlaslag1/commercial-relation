@@ -87,7 +87,7 @@ export default function PersonList() {
   };
 
   const handleRelationsClick = (id) => {
-    navigate(`/persDetails/personne/${id}`);
+    navigate(`/relations/personne/${id}`);
   };
 
   const handleEditClick = () => {

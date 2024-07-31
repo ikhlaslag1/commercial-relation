@@ -132,7 +132,7 @@ export default function OrganizationList() {
   };
  
   const handleRelationsClick = (id) => {
-    navigate(`/OrgDetails/organization/${id}`);
+    navigate(`/relations/organization/${id}`);
   };
 
   const handleSearchChange = (event, newValue) => {
