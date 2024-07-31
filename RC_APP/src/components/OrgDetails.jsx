@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { Typography, CircularProgress, Paper, IconButton, Table, TableBody, TableCell, TableRow, Grid, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Info as InfoIcon } from '@mui/icons-material';
+import { CircularProgress, Paper, IconButton, Table, TableBody, TableCell, TableRow, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import { Info as InfoIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 const NodeDetails = () => {
@@ -28,35 +28,30 @@ const NodeDetails = () => {
     fetchNodeDetails();
   }, [type, id]);
 
-  const handleEditClick = () => {
-    navigate(`/edit_Org/${type.toLowerCase()}/${id}`);
-  };
-
-  const handleDeleteClick = async () => {
-    try {
-      await axios.delete(`http://localhost:5000/nodes/delete/${type.toLowerCase()}/${id}`);
-      console.log('Node deleted successfully');
-      navigate('/Organization'); 
-    } catch (error) {
-      console.error('Error deleting node:', error);
-    }
-  };
   const handleViewRelationDetails = (relation) => {
     setSelectedRelation(relation);
     setOpenDialog(true);
   };
+
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedRelation(null);
   };
+
   const renderRelationDetails = (relation) => {
+    if (!relation || !relation.relationshipProperties) {
+      return null;
+    }
+
+    const props = relation.relationshipProperties;
+
     switch (relation.relationType) {
       case 'TRAVAILLE':
         return (
           <>
             <TableRow>
               <TableCell><strong>Position:</strong></TableCell>
-              <TableCell>{relation.params.position}</TableCell>
+              <TableCell>{props.position}</TableCell>
             </TableRow>
           </>
         );
@@ -65,11 +60,11 @@ const NodeDetails = () => {
           <>
             <TableRow>
               <TableCell><strong>Field:</strong></TableCell>
-              <TableCell>{relation.params.domaine}</TableCell>
+              <TableCell>{props.domaine}</TableCell>
             </TableRow>
             <TableRow>
               <TableCell><strong>Level:</strong></TableCell>
-              <TableCell>{relation.params.niveau}</TableCell>
+              <TableCell>{props.niveau}</TableCell>
             </TableRow>
           </>
         );
@@ -78,7 +73,7 @@ const NodeDetails = () => {
           <>
             <TableRow>
               <TableCell><strong>Type:</strong></TableCell>
-              <TableCell>{relation.params.type}</TableCell>
+              <TableCell>{props.type}</TableCell>
             </TableRow>
           </>
         );
@@ -87,11 +82,11 @@ const NodeDetails = () => {
           <>
             <TableRow>
               <TableCell><strong>Project:</strong></TableCell>
-              <TableCell>{relation.params.projet}</TableCell>
+              <TableCell>{props.projet}</TableCell>
             </TableRow>
             <TableRow>
               <TableCell><strong>Role:</strong></TableCell>
-              <TableCell>{relation.params.role}</TableCell>
+              <TableCell>{props.role}</TableCell>
             </TableRow>
           </>
         );
@@ -104,103 +99,38 @@ const NodeDetails = () => {
     <div style={{ padding: '20px' }}>
       {node ? (
         <Paper elevation={3} style={{ padding: '20px' }}>
-          <Typography variant="h5" gutterBottom>Organization Details</Typography>
-          <Grid container spacing={3}>
-            {/* Node Details */}
-            <Grid item xs={12}>
-              <Paper elevation={1} style={{ padding: '20px' }}>
-                <Typography variant="h6" gutterBottom>Details</Typography>
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell><strong>ID:</strong></TableCell>
-                      <TableCell>{node.id}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><strong>Name:</strong></TableCell>
-                      <TableCell>{node.nom}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><strong>Industry:</strong></TableCell>
-                      <TableCell>{node.industry}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><strong>Address:</strong></TableCell>
-                      <TableCell>{node.adresse}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><strong>Email:</strong></TableCell>
-                      <TableCell>{node.email}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><strong>Phone number:</strong></TableCell>
-                      <TableCell>{node.telephone}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><strong>Website:</strong></TableCell>
-                      <TableCell>{node.siteWeb}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><strong>City:</strong></TableCell>
-                      <TableCell>{node.ville}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-                <div style={{ marginTop: '20px', textAlign: 'right' }}>
-                  <IconButton onClick={handleEditClick} color="primary">
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton onClick={handleDeleteClick} color="secondary">
-                    <DeleteIcon />
-                  </IconButton>
-                </div>
-              </Paper>
-            </Grid>
+          <Typography variant="h5" gutterBottom>Relations</Typography>
+          <Table>
+            <TableBody>
+              {node.relations && node.relations.length > 0 ? (
+                node.relations.map((relation, index) => (
+                  <TableRow key={index}>
+                    <TableCell><strong>Type:</strong></TableCell>
+                    <TableCell>{relation.relationType}</TableCell>
+                    <TableCell><strong>With:</strong></TableCell>
+                    <TableCell>{relation.relatedNodeName}</TableCell>
+                    <TableCell>
+                      <IconButton onClick={() => handleViewRelationDetails(relation)} color="info">
+                        <InfoIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5}>No relations found</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
 
-            {/* Relations */}
-            <Grid item xs={12} style={{ marginTop: '20px' }}>
-              <Paper elevation={1} style={{ padding: '20px' }}>
-                <Typography variant="h6" gutterBottom>Relations</Typography>
-                <Table>
-                  <TableBody>
-                    {node.relations && node.relations.length > 0 ? (
-                      node.relations.map((relation, index) => (
-                        <TableRow key={index}>
-                          <TableCell><strong>Type:</strong></TableCell>
-                          <TableCell>{relation.relationType}</TableCell>
-                          <TableCell><strong>With:</strong></TableCell>
-                          <TableCell>{relation.relatedNodeName}</TableCell>
-                          <TableCell>
-                            <IconButton onClick={() => handleViewRelationDetails(relation)} color="info">
-                              <InfoIcon />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4}>No relations found</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </Paper>
-            </Grid>
-          </Grid>
+          {/* Relation Details Dialog */}
           <Dialog open={openDialog} onClose={handleCloseDialog}>
             <DialogTitle>Relation Details</DialogTitle>
             <DialogContent>
               {selectedRelation && (
                 <Table>
                   <TableBody>
-                    <TableRow>
-                      <TableCell><strong>Type:</strong></TableCell>
-                      <TableCell>{selectedRelation.relationType}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><strong>Related Node:</strong></TableCell>
-                      <TableCell>{selectedRelation.relatedNodeName}</TableCell>
-                    </TableRow>
                     {renderRelationDetails(selectedRelation)}
                   </TableBody>
                 </Table>
@@ -210,6 +140,7 @@ const NodeDetails = () => {
               <Button onClick={handleCloseDialog} color="primary">Close</Button>
             </DialogActions>
           </Dialog>
+
         </Paper>
       ) : (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>

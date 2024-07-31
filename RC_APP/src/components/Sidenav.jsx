@@ -12,11 +12,12 @@ import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import HomeIcon from '@mui/icons-material/Home';
-import NodeIcon from '@mui/icons-material/AccountTree';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import RelationsIcon from '@mui/icons-material/Group';
+import NodeIcon from '@mui/icons-material/AccountTree';
 import { useNavigate } from 'react-router-dom';
+import PathoraLogo from '../images/logo.png'; // Assurez-vous que le chemin du logo est correct
+import NameImage from '../images/name.png'; // Assurez-vous que le chemin de l'image est correct
 
 const drawerWidth = 240;
 
@@ -43,13 +44,23 @@ const closedMixin = (theme) => ({
   },
 });
 
-const DrawerHeader = styled('div')(({ theme }) => ({
+const DrawerHeader = styled('div')(({ theme, open }) => ({
   display: 'flex',
   alignItems: 'center',
-  justifyContent: 'flex-end',
+  justifyContent: open ? 'space-between' : 'flex-start',
   padding: theme.spacing(0, 1),
-  // necessary for content to be below app bar
   ...theme.mixins.toolbar,
+}));
+
+const LogoSection = styled('div')(({ theme, open }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexGrow: 1,
+  padding: theme.spacing(2),
+  ...(open && {
+    textAlign: 'center',
+  }),
 }));
 
 const CustomDrawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' })(
@@ -71,17 +82,33 @@ const CustomDrawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== '
 
 export default function Sidenav() {
   const theme = useTheme();
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(false); // Définir l'état par défaut sur false pour que la barre latérale soit fermée par défaut
   const navigate = useNavigate();
 
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
       <CustomDrawer variant="permanent" open={open}>
-        <DrawerHeader>
-          <IconButton onClick={() => setOpen(!open)}>
-            {theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </IconButton>
+        <DrawerHeader open={open}>
+          {/* Affichage conditionnel du bouton de réouverture */}
+          {!open && (
+            <IconButton onClick={() => setOpen(true)}>
+              <ChevronRightIcon />
+            </IconButton>
+          )}
+          <LogoSection open={open}>
+            <img src={PathoraLogo} alt="Pathora Logo" style={{ width: 30, height: 30 }} /> {/* Logo plus petit */}
+            {open && (
+              <Box component="span" sx={{ ml: 1, marginTop: 2 }}>
+                <img src={NameImage} alt="Name Logo" style={{ width: 100, height: 'auto' }} />
+              </Box>
+            )}
+          </LogoSection>
+          {open && (
+            <IconButton onClick={() => setOpen(false)}>
+              {theme.direction === 'rtl' ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+            </IconButton>
+          )}
         </DrawerHeader>
         <Divider />
         <List>
@@ -102,7 +129,7 @@ export default function Sidenav() {
               >
                 <ManageSearchIcon />
               </ListItemIcon>
-              <ListItemText primary="Home" sx={{ opacity: open ? 1 : 0 }} />
+              <ListItemText primary="Search Relations" sx={{ opacity: open ? 1 : 0 }} />
             </ListItemButton>
           </ListItem>
         </List>
@@ -124,7 +151,7 @@ export default function Sidenav() {
               >
                 <RelationsIcon />
               </ListItemIcon>
-              <ListItemText primary="Nodes" sx={{ opacity: open ? 1 : 0 }} />
+              <ListItemText primary="Person" sx={{ opacity: open ? 1 : 0 }} />
             </ListItemButton>
           </ListItem>
         </List>
@@ -146,7 +173,7 @@ export default function Sidenav() {
               >
                 <NodeIcon />
               </ListItemIcon>
-              <ListItemText primary="Relations" sx={{ opacity: open ? 1 : 0 }} />
+              <ListItemText primary="Organization" sx={{ opacity: open ? 1 : 0 }} />
             </ListItemButton>
           </ListItem>
         </List>

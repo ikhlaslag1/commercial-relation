@@ -34,7 +34,7 @@ export default function AddNodeForm() {
     try {
       await axios.post('http://localhost:5000/nodes/add', formData);
       alert('Node added successfully!');
-      navigate('/Person'); 
+      navigate('/Personne'); 
     } catch (error) {
       console.error('Erreur lors de l\'ajout du node:', error);
       alert('Failed to add node. Please try again.');

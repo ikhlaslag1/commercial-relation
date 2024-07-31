@@ -60,7 +60,7 @@ const EditForm = () => {
       const response = await axios.put(`http://localhost:5000/nodes/edit/${id}`, formDataWithType);
       console.log('Response:', response);
       console.log('Node updated successfully');
-      navigate(`/persDetails/${type}/${id}`);
+      navigate(`/Personne`);
     } catch (error) {
       console.error('Erreur lors de la mise à jour du nœud:', error);
       if (error.response) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
     Container, Typography, Card, CardContent, CardHeader, Grid, Alert,
-    Box, TextField, Autocomplete, IconButton, Button, MenuItem, Select, FormControl, InputLabel
+    Box, TextField, Autocomplete, IconButton, MenuItem, Select, FormControl, InputLabel, Pagination
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
@@ -125,7 +125,9 @@ const SearchRelations = () => {
     const indexOfFirstRelation = indexOfLastRelation - relationsPerPage;
     const currentRelations = relations.slice(indexOfFirstRelation, indexOfLastRelation);
 
-    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+    const handlePageChange = (event, value) => {
+        setCurrentPage(value);
+    };
 
     return (
         <Container maxWidth="lg">
@@ -191,7 +193,7 @@ const SearchRelations = () => {
             {noRelationsFound && !error && (
                 <Box display="flex" justifyContent="center" alignItems="center" height="100px">
                     <Typography variant="body1" color="textSecondary">
-                        No paths found between the selected nodes.
+                        No paths found between the selected names.
                     </Typography>
                 </Box>
             )}
@@ -241,21 +243,12 @@ const SearchRelations = () => {
 
             {relations.length > 0 && (
                 <Box display="flex" justifyContent="center" mt={3}>
-                    <Button
-                        variant="contained"
-                        onClick={() => paginate(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        sx={{ mr: 1 }}
-                    >
-                        Previous
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={() => paginate(currentPage + 1)}
-                        disabled={indexOfLastRelation >= relations.length}
-                    >
-                        Next
-                    </Button>
+                    <Pagination
+                        count={Math.ceil(relations.length / relationsPerPage)}
+                        page={currentPage}
+                        onChange={handlePageChange}
+                        color="primary"
+                    />
                 </Box>
             )}
         </Container>

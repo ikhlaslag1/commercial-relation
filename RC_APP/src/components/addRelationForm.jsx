@@ -70,12 +70,12 @@ const AssociateForm = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
- 
+  
     if (!relationType || !associationType) {
       alert('Please select relation type and association type.');
       return;
     }
- 
+  
     const relation = {
       type: relationType,
       params: {
@@ -91,14 +91,19 @@ const AssociateForm = () => {
         role: relationType === 'COLLABORATION' ? relationDetails.role : undefined,
       }
     };
+  
     try {
       await axios.post('http://localhost:5000/relations/add', relation);
       alert('Relation created successfully!');
-      navigate('/Organization');
+      const redirectPath = selectedNode.type === 'Personne'
+        ? `/persDetails/personne/${id}`
+        : `/orgDetails/organization/${id}`;
+      navigate(redirectPath);
     } catch (error) {
       console.error('Error creating relation:', error);
     }
   };
+  
 
   const getRelationTypeOptions = () => {
     if (selectedNode && associationType) {
@@ -197,7 +202,7 @@ const AssociateForm = () => {
           {selectedNode ? (
             <Box>
               <Typography variant="h6" gutterBottom>
-                Selected Node: {selectedNode.nom}
+                Selected name: {selectedNode.nom}
               </Typography>
               <FormControl fullWidth margin="normal">
                 <InputLabel>Associate With</InputLabel>
