@@ -4,14 +4,22 @@ class Organization {
     constructor(driver) {
         this.driver = driver;
     }
-
+    formatDate(dateString) {
+        if (!dateString) return null;
+        const date = new Date(dateString);
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
     async getAll(page = 0, limit = 10, name = '') {
         const session = this.driver.session();
         const offset = page * limit;
         let query = `
             MATCH (o:Organization)
             WHERE o.nom CONTAINS $name
-            RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry,o.telephone as telephone, o.siteWeb as siteWeb
+            RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry,o.telephone as telephone, o.siteWeb as siteWeb,
+            o.createdAt as createdAt, o.updatedAt as updatedAt
             SKIP $offset LIMIT $limit
         `;
         try {
@@ -29,7 +37,9 @@ class Organization {
                 industry: record.get('industry') ? record.get('industry').toString() : null,
                 email: record.get('email') ? record.get('email').toString() : null,
                 telephone: record.get('telephone') ? record.get('telephone').toString() : null,
-                siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null
+                siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null,
+                createdAt: this.formatDate(record.get('createdAt') ? record.get('createdAt').toString() : null),
+                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null)
             }));
 
             const countResult = await session.run(`
@@ -68,6 +78,7 @@ class Organization {
     }
     async create(nom, industry, adresse, email, telephone, siteWeb, ville) {
         const session = this.driver.session();
+        const currentTime = new Date().toISOString();
         try {
             const result = await session.run(`
                 CREATE (o:Organization {
@@ -77,10 +88,11 @@ class Organization {
                     email: $email, 
                     telephone: $telephone, 
                     siteWeb: $siteWeb, 
-                    ville: $ville
+                    ville: $ville,
+                    createdAt: $currentTime, updatedAt: $currentTime
                 })
                 RETURN id(o) as id
-            `, { nom, industry, adresse, email, telephone, siteWeb, ville });
+            `, { nom, industry, adresse, email, telephone, siteWeb, ville,currentTime });
     
             return result.records[0].get('id').toString();
         } finally {
@@ -91,13 +103,14 @@ class Organization {
 
     async update(id, nom, industry, adresse, email, telephone, siteWeb, ville) {
         const session = this.driver.session();
+        const currentTime = new Date().toISOString();
         try {
             await session.run(`
                 MATCH (o:Organization)
                 WHERE id(o) = toInteger($id)
-                SET o.nom = $nom, o.industry = $industry, o.adresse = $adresse, o.email = $email, o.telephone = $telephone, o.siteWeb = $siteWeb, o.ville = $ville
+                SET o.nom = $nom, o.industry = $industry, o.adresse = $adresse, o.email = $email, o.telephone = $telephone, o.siteWeb = $siteWeb, o.ville = $ville,o.updatedAt = $currentTime
                 RETURN o
-            `, { id, nom, industry, adresse, email, telephone, siteWeb, ville });
+            `, { id, nom, industry, adresse, email, telephone, siteWeb, ville,currentTime });
         } finally {
             await session.close();
         }
@@ -133,7 +146,8 @@ class Organization {
             const result = await session.run(`
                 MATCH (o:Organization)
                 WHERE id(o) = toInteger($id)
-                RETURN id(o) as id, o.nom as nom, o.industry as industry, o.adresse as adresse, o.email as email, o.telephone as telephone, o.siteWeb as siteWeb, o.ville as ville
+                RETURN id(o) as id, o.nom as nom, o.industry as industry, o.adresse as adresse, o.email as email, o.telephone as telephone, o.siteWeb as siteWeb, o.ville as ville,
+                o.createdAt as createdAt, o.updatedAt as updatedAt
             `, { id });
             return result.records.map(record => ({
                 id: record.get('id').toString(),
@@ -143,7 +157,9 @@ class Organization {
                 email: record.get('email') ? record.get('email').toString() : null,
                 telephone: record.get('telephone') ? record.get('telephone').toString() : null,
                 siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null,
-                ville: record.get('ville') ? record.get('ville').toString() : null
+                ville: record.get('ville') ? record.get('ville').toString() : null,
+                createdAt: this.formatDate(record.get('createdAt') ? record.get('createdAt').toString() : null),
+                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null)
             }))[0];
         } finally {
             await session.close();
