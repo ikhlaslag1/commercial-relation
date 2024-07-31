@@ -102,74 +102,77 @@ class Relation {
         }
     }
     
-    async updateRelation(relationId, updatedParams) {
+    async updateRelation(id, updatedParams) {
         try {
-            let query = '';
-            let queryParams = { relationId };
-    
-            switch (updatedParams.type) {
-                case 'TRAVAILLE':
-                    query = `
-                        MATCH (p:Personne)-[r:TRAVAILLE]->(o:Organization)
-                        WHERE id(r) = toInteger($relationId)
-                        SET r.position = $position
-                    `;
-                    queryParams.position = updatedParams.position;
-                    break;
-                case 'ETUDE':
-                    query = `
-                        MATCH (p:Personne)-[r:ETUDE]->(o:Organization)
-                        WHERE id(r) = toInteger($relationId)
-                        SET r.domaine = $domaine, r.niveau = $niveau
-                    `;
-                    queryParams.domaine = updatedParams.domaine;
-                    queryParams.niveau = updatedParams.niveau;
-                    break;
-                case 'FAMILLE':
-                    query = `
-                        MATCH (p1:Personne)-[r:FAMILLE]->(p2:Personne)
-                        WHERE id(r) = toInteger($relationId)
-                        SET r.type = $type
-                    `;
-                    queryParams.type = updatedParams.type;
-                    break;
-                case 'COLLABORATION':
-                    query = `
-                        MATCH (o1:Organization)-[r:COLLABORATION]->(o2:Organization)
-                        WHERE id(r) = toInteger($relationId)
-                        SET r.projet = $projet, r.role = $role
-                    `;
-                    queryParams.projet = updatedParams.projet;
-                    queryParams.role = updatedParams.role;
-                    break;
-                case 'AMITIE':
-                    query = '';
-                    break;
-                default:
-                    throw new Error(`Type de relation non pris en charge: ${updatedParams.type}`);
-            }
-    
-            if (query) {
-                await this.session.run(query, queryParams);
-            }
+          let query = '';
+          let queryParams = {relationId: id };
+          console.log('Update Params:', updatedParams);
+          
+          switch (updatedParams.type) {
+            case 'TRAVAILLE':
+              query = `
+                MATCH (p:Personne)-[r:TRAVAILLE]->(o:Organization)
+                WHERE id(r) = toInteger($relationId)
+                SET r.position = $position
+              `;
+              queryParams.position = updatedParams.relationshipProperties.position; // Ensure this matches the query
+              break;
+            case 'ETUDE':
+              query = `
+                MATCH (p:Personne)-[r:ETUDE]->(o:Organization)
+                WHERE id(r) = toInteger($relationId)
+                SET r.domaine = $domaine, r.niveau = $niveau
+              `;
+              queryParams.domaine = updatedParams.relationshipProperties.domaine;
+              queryParams.niveau = updatedParams.relationshipProperties.niveau;
+              break;
+            case 'FAMILLE':
+              query = `
+                MATCH (p1:Personne)-[r:FAMILLE]->(p2:Personne)
+                WHERE id(r) = toInteger($relationId)
+                SET r.type = $type
+              `;
+              queryParams.type = updatedParams.relationshipProperties.type;
+              break;
+            case 'COLLABORATION':
+              query = `
+                MATCH (o1:Organization)-[r:COLLABORATION]->(o2:Organization)
+                WHERE id(r) = toInteger($relationId)
+                SET r.projet = $projet, r.role = $role
+              `;
+              queryParams.projet = updatedParams.relationshipProperties.projet;
+              queryParams.role = updatedParams.relationshipProperties.role;
+              break;
+            case 'AMITIE':
+              query = ''; // Handle 'AMITIE' if needed
+              break;
+            default:
+              throw new Error(`Type de relation non pris en charge: ${updatedParams.type}`);
+          }
+      
+          if (query) {
+            // Ensure `relationId` and other parameters are included
+            await this.session.run(query, queryParams);
+          }
         } catch (error) {
-            throw error;
+          throw error;
         }
-    }
-
+      }
+      
     async getRelationsById(nodeId) {
         const session = this.driver.session();
         try {
             const result = await session.run(`
                 MATCH (n)-[r]->(m)
                 WHERE id(n) = toInteger($nodeId)
-                RETURN type(r) AS relationType, id(r) AS relationId, id(m) AS relatedNodeId, m.nom AS relatedNodeName, r AS relationshipProperties
+                RETURN type(r) AS relationType, id(r) AS relationId, id(m) AS relatedNodeId,n.nom as nodeName, m.nom AS relatedNodeName, r AS relationshipProperties
             `, { nodeId });
     
             const relations = result.records.map(record => ({
                 relationType: record.get('relationType').toString(),
                 relationId: record.get('relationId').toString(),
                 relatedNodeId: record.get('relatedNodeId').toString(),
+                nodeName: record.get('nodeName') ? record.get('nodeName').toString() : null,
                 relatedNodeName: record.get('relatedNodeName') ? record.get('relatedNodeName').toString() : null,
                 relationshipProperties: record.get('relationshipProperties').properties
             }));
@@ -180,7 +183,29 @@ class Relation {
         }
     }
     
+    async getRelationDetails(id) {
+        const session = this.driver.session();
+        try {
+          const result = await session.run(`
+            MATCH (n)-[r]->(m)
+            WHERE id(r) = toInteger($id)
+            RETURN type(r) AS relationType, id(r) AS relationId, id(m) AS relatedNodeId, n.nom AS nodeName, m.nom AS relatedNodeName, r AS relationshipProperties
+          `, { id: parseInt(id, 10) });
     
+          const relations = result.records.map(record => ({
+            relationType: record.get('relationType').toString(),
+            relationId: record.get('relationId').toString(),
+            relatedNodeId: record.get('relatedNodeId').toString(),
+            nodeName: record.get('nodeName') ? record.get('nodeName').toString() : null,
+            relatedNodeName: record.get('relatedNodeName') ? record.get('relatedNodeName').toString() : null,
+            relationshipProperties: record.get('relationshipProperties').properties
+          }));
+    
+          return relations.length > 0 ? relations[0] : null;
+        } finally {
+          await session.close();
+        }
+      }
     async deleteRelation(relationId, type) {
         try {
             let query = '';

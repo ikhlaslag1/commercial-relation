@@ -75,7 +75,7 @@ async function addRelation(req, res) {
 async function getRelationById (req, res) {
     const { id } = req.params;
     try {
-        const relationDetails = await relation.getById(id);
+        const relationDetails = await relation.getRelationsById(id);
         if (!relationDetails) {
             return res.status(404).json({ error: 'Relation non trouvée.' });
         }
@@ -86,19 +86,36 @@ async function getRelationById (req, res) {
     }
 };
 
-
-async function updateRelation(req, res) {
-    const { relationId } = req.params;
+const getRelationDetails = async (req, res) => {
+    const { id } = req.params;
+    try {
+      const relationDetails = await relation.getRelationDetails(id);
+      if (!relationDetails) {
+        return res.status(404).json({ error: 'Relation non trouvée.' });
+      }
+      res.json(relationDetails);
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la relation:', error);
+      res.status(500).json({ error: 'Erreur lors de la récupération de la relation.' });
+    }
+  };
+  
+  async function updateRelation(req, res) {
+    const { id } = req.params;
     const { type, ...updatedParams } = req.body;
 
+    console.log('Type:', type); // Add this line to check the type
+    console.log('Updated Params:', updatedParams); // Add this line to see other parameters
+
     try {
-        await relation.updateRelation(relationId, { type, ...updatedParams });
-        res.json({ message: 'Relation mise à jour avec succès' }); 
+        await relation.updateRelation(id, { type, ...updatedParams });
+        res.json({ message: 'Relation mise à jour avec succès' });
     } catch (error) {
         console.error('Erreur lors de la mise à jour de la relation:', error);
         res.status(500).json({ error: 'Erreur lors de la mise à jour de la relation' });
     }
 }
+
 async function getAllRelationsBetweenNodes(req, res) {
     const { nodeName1, nodeName2 } = req.params;
    
@@ -160,5 +177,6 @@ module.exports = {
     getRelationById,
     getAllRelationsBetweenNodes,
     getAllPathsDFS,
-    getAllPaths
+    getAllPaths,
+    getRelationDetails
 };
