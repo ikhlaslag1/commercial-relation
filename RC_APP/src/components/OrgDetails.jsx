@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { CircularProgress, Paper, IconButton, Table, TableBody, TableCell, TableRow, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
-import { Info as InfoIcon } from '@mui/icons-material';
+import { Info as InfoIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 const NodeDetails = () => {
@@ -10,6 +10,8 @@ const NodeDetails = () => {
   const [node, setNode] = useState(null);
   const [selectedRelation, setSelectedRelation] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [relationToDelete, setRelationToDelete] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,6 +38,39 @@ const NodeDetails = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedRelation(null);
+  };
+
+  const handleEditRelation = (relation) => {
+    navigate(`/edit-relation/${relation.relationId}`);
+  };
+
+  const handleOpenConfirmDialog = (relation) => {
+    setRelationToDelete({
+      id: relation.relationId,
+      relationType: relation.relationType,
+    });
+    setOpenConfirmDialog(true);
+  };
+
+  const handleCloseConfirmDialog = () => {
+    setOpenConfirmDialog(false);
+    setRelationToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (relationToDelete) {
+      try {
+        await axios.delete(`http://localhost:5000/relations/delete/${relationToDelete.id}`, {
+          data: { type: relationToDelete.relationType }
+        });
+        // Re-fetch the node details
+        const response = await axios.get(`http://localhost:5000/nodes/${type.toLowerCase()}/${id}`);
+        setNode(response.data);
+        handleCloseConfirmDialog();
+      } catch (error) {
+        console.error('Erreur lors de la suppression de la relation:', error);
+      }
+    }
   };
 
   const renderRelationDetails = (relation) => {
@@ -110,7 +145,13 @@ const NodeDetails = () => {
                     <TableCell><strong>With:</strong></TableCell>
                     <TableCell>{relation.relatedNodeName}</TableCell>
                     <TableCell>
-                      <IconButton onClick={() => handleViewRelationDetails(relation)} color="info">
+                      <IconButton onClick={() => handleEditRelation(relation)} color="primary">
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton onClick={() => handleOpenConfirmDialog(relation)} color="error">
+                        <DeleteIcon />
+                      </IconButton>
+                      <IconButton onClick={() => handleViewRelationDetails(relation)} style={{ color: "green" }}>
                         <InfoIcon />
                       </IconButton>
                     </TableCell>
@@ -138,6 +179,18 @@ const NodeDetails = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={handleCloseDialog} color="primary">Close</Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Confirm Delete Dialog */}
+          <Dialog open={openConfirmDialog} onClose={handleCloseConfirmDialog}>
+            <DialogTitle>Delete confirmation</DialogTitle>
+            <DialogContent>
+              <Typography>Are you sure you want to delete this relationship?</Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseConfirmDialog} color="primary">Cancel</Button>
+              <Button onClick={handleConfirmDelete} color="error">Delete</Button>
             </DialogActions>
           </Dialog>
 
