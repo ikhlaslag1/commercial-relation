@@ -1,4 +1,5 @@
 const neo4j = require('neo4j-driver');
+const { v4: uuidv4 } = require('uuid');
 
 class Personne {
     constructor(driver) {
@@ -22,7 +23,7 @@ class Personne {
             WHERE p.nom CONTAINS $name
             RETURN id(p) as id, p.nom as nom, p.age as age, p.ville as ville, p.status as status, 
                    p.email as email, p.telephone as telephone, p.adresse as adresse, 
-                   p.createdAt as createdAt, p.updatedAt as updatedAt
+                   p.createdAt as createdAt, p.updatedAt as updatedAt, p.uuid as uuid
             SKIP $offset LIMIT $limit
         `;
         try {
@@ -42,7 +43,8 @@ class Personne {
                 telephone: record.get('telephone') ? record.get('telephone').toString() : null,
                 adresse: record.get('adresse') ? record.get('adresse').toString() : null,
                 createdAt: this.formatDate(record.get('createdAt') ? record.get('createdAt').toString() : null),
-                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null)
+                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null),
+                uuid: record.get('uuid') ? record.get('uuid').toString() : null
             }));
     
             const countResult = await session.run(`
@@ -64,12 +66,13 @@ class Personne {
         try {
             const result = await session.run(`
                 MATCH (p:Personne)
-                RETURN id(p) as id, p.nom as nom
+                RETURN id(p) as id, p.nom as nom, p.uuid as uuid
             `);
     
             return result.records.map(record => ({
                 id: record.get('id').toString(), 
-                nom: record.get('nom') ? record.get('nom').toString() : null
+                nom: record.get('nom') ? record.get('nom').toString() : null,
+                uuid: record.get('uuid') ? record.get('uuid').toString() : null
             }));
         } finally {
             await session.close();
@@ -79,11 +82,12 @@ class Personne {
     async create(nom, age, ville, status, email, telephone, adresse) {
         const session = this.driver.session();
         const currentTime = new Date().toISOString();
+        const uuid = uuidv4(); // Générer un UUID
         try {
             const result = await session.run(`
-                CREATE (p:Personne {nom: $nom, age: $age, ville: $ville, status: $status, email: $email, telephone: $telephone, adresse: $adresse, createdAt: $currentTime, updatedAt: $currentTime})
+                CREATE (p:Personne {uuid: $uuid, nom: $nom, age: $age, ville: $ville, status: $status, email: $email, telephone: $telephone, adresse: $adresse, createdAt: $currentTime, updatedAt: $currentTime})
                 RETURN id(p) as id
-            `, { nom, age, ville, status, email, telephone, adresse, currentTime });
+            `, { uuid, nom, age, ville, status, email, telephone, adresse, currentTime });
             return result.records[0].get('id').toString();
         } finally {
             await session.close();
@@ -117,7 +121,7 @@ class Personne {
             const result = await session.run(`
                 MATCH (p:Personne {nom: $nom})
                 OPTIONAL MATCH (p)-[r]->(relatedNode)
-                RETURN id(p) as id, p.nom as nom, p.age as age, p.ville as ville, p.status as status,
+                RETURN id(p) as id, p.nom as nom, p.age as age, p.ville as ville, p.status as status, p.uuid as uuid,
                        collect({type: type(r), properties: properties(relatedNode)}) as relations
             `, { nom });
             return result.records.map(record => ({
@@ -126,6 +130,7 @@ class Personne {
                 age: record.get('age').toString(),
                 ville: record.get('ville').toString(),
                 status: record.get('status').toString(),
+                uuid: record.get('uuid') ? record.get('uuid').toString() : null,
                 relations: record.get('relations').map(rel => ({
                     type: rel.type,
                     properties: rel.properties
@@ -143,7 +148,7 @@ class Personne {
                 MATCH (p:Personne)
                 WHERE id(p) = toInteger($id)
                 RETURN id(p) as id, p.nom as nom, p.age as age, p.ville as ville, p.status as status, p.email as email, p.telephone as telephone, p.adresse as adresse,
-                       p.createdAt as createdAt, p.updatedAt as updatedAt
+                       p.createdAt as createdAt, p.updatedAt as updatedAt, p.uuid as uuid
             `, { id });
             return result.records.map(record => ({
                 id: record.get('id').toString(),
@@ -155,7 +160,8 @@ class Personne {
                 telephone: record.get('telephone') ? record.get('telephone').toString() : null,
                 adresse: record.get('adresse') ? record.get('adresse').toString() : null,
                 createdAt: this.formatDate(record.get('createdAt') ? record.get('createdAt').toString() : null),
-                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null)
+                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null),
+                uuid: record.get('uuid') ? record.get('uuid').toString() : null
             }))[0];
         } finally {
             await session.close();
