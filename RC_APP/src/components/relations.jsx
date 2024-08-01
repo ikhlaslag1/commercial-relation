@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { CircularProgress, Paper, IconButton, Table, TableBody, TableCell, TableRow, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import {
+  CircularProgress, Paper, IconButton, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Typography, Dialog, DialogTitle,
+  DialogContent, DialogActions, Button, Tooltip, MenuItem, Select, InputLabel, FormControl, Divider
+} from '@mui/material';
 import { Info as InfoIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,6 +16,8 @@ const NodeDetails = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [relationToDelete, setRelationToDelete] = useState(null);
+  const [filterText, setFilterText] = useState(''); // State for filter text
+  const [filterType, setFilterType] = useState(''); // State for filter type
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -126,76 +132,124 @@ const NodeDetails = () => {
     );
   };
 
+  // Filter the relations based on filterText and filterType
+  const filteredRelations = node?.relations?.filter(relation =>
+    (filterText === '' || relation.relationType.toLowerCase().includes(filterText.toLowerCase()) ||
+    relation.relatedNodeName.toLowerCase().includes(filterText.toLowerCase())) &&
+    (filterType === '' || relation.relationType === filterType)
+  ) || [];
+
   return (
-    <div style={{ padding: '20px' }}>
-      {node ? (
-        <Paper elevation={3} style={{ padding: '20px' }}>
-          <Typography variant="h5" gutterBottom>Relations</Typography>
-          <Table>
-            <TableBody>
-              {node.relations && node.relations.length > 0 ? (
-                node.relations.map((relation, index) => (
-                  <TableRow key={index}>
-                    <TableCell><strong>Type:</strong></TableCell>
-                    <TableCell>{relation.relationType}</TableCell>
-                    <TableCell><strong>With:</strong></TableCell>
-                    <TableCell>{relation.relatedNodeName}</TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => handleViewRelationDetails(relation)} style={{ color: "green" }}>
-                        <InfoIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleEditRelation(relation)} color="primary">
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleOpenConfirmDialog(relation)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
+    <div style={{ display: 'flex', padding: '20px' }}>
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {node ? (
+          <Paper sx={{ width: "100%", overflow: "hidden", padding: "12px" }}>
+            <Typography variant="h5" gutterBottom>
+              {`${node.nom}'s Relations`}
+            </Typography>
+            <Divider />
+            <FormControl fullWidth  style={{ width: '200px',top: '20px' }}>
+          <InputLabel  style={{ top: '-10px' }}>Filter by Type</InputLabel>
+          <Select
+            size="small"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            label="Filter by Type"
+          >
+            <MenuItem value="">All Types</MenuItem>
+            <MenuItem value="TRAVAILLE">Travaille</MenuItem>
+            <MenuItem value="ETUDE">Etude</MenuItem>
+            <MenuItem value="FAMILLE">Famille</MenuItem>
+            <MenuItem value="COLLABORATION">Collaboration</MenuItem>
+            <MenuItem value="AMITIE">Amitie</MenuItem>
+          </Select>
+          </FormControl>
+            <TableContainer style={{ maxHeight: '400px', marginTop: '20px' }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>#</strong></TableCell> {/* Number column header */}
+                    <TableCell><strong>Type</strong></TableCell>
+                    <TableCell><strong>With</strong></TableCell>
+                    <TableCell><strong>Details</strong></TableCell>
+                    <TableCell><strong>Actions</strong></TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5}>No relations found</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                </TableHead>
+                <TableBody>
+                  {filteredRelations.length > 0 ? (
+                    filteredRelations.map((relation, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{index + 1}</TableCell> {/* Display row number */}
+                        <TableCell>{relation.relationType}</TableCell>
+                        <TableCell>{relation.relatedNodeName}</TableCell>
+                        <TableCell>
+                          <Tooltip title="View Details" arrow>
+                            <IconButton onClick={() => handleViewRelationDetails(relation)} style={{ color: "green" }}>
+                              <InfoIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="Edit" arrow>
+                            <IconButton onClick={() => handleEditRelation(relation)} color="primary">
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete" arrow>
+                            <IconButton onClick={() => handleOpenConfirmDialog(relation)} color="error">
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5}>No relations found</TableCell> {/* Adjust colspan */}
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
 
-          {/* Relation Details Dialog */}
-          <Dialog open={openDialog} onClose={handleCloseDialog}>
-            <DialogTitle>Relation Details</DialogTitle>
-            <DialogContent>
-              {selectedRelation && (
-                <Table>
-                  <TableBody>
-                    {renderRelationDetails(selectedRelation)}
-                  </TableBody>
-                </Table>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDialog} color="primary">Close</Button>
-            </DialogActions>
-          </Dialog>
+            {/* Relation Details Dialog */}
+            <Dialog open={openDialog} onClose={handleCloseDialog}>
+              <DialogTitle>Relation Details</DialogTitle>
+              <DialogContent>
+                {selectedRelation && (
+                  <Table>
+                    <TableBody>
+                      {renderRelationDetails(selectedRelation)}
+                    </TableBody>
+                  </Table>
+                )}
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCloseDialog} color="primary">Close</Button>
+              </DialogActions>
+            </Dialog>
 
-          {/* Confirm Delete Dialog */}
-          <Dialog open={openConfirmDialog} onClose={handleCloseConfirmDialog}>
-            <DialogTitle>Delete confirmation</DialogTitle>
-            <DialogContent>
-              <Typography>Are you sure you want to delete this relationship?</Typography>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseConfirmDialog} color="primary">Cancel</Button>
-              <Button onClick={handleConfirmDelete} color="error">Delete</Button>
-            </DialogActions>
-          </Dialog>
+            {/* Confirm Delete Dialog */}
+            <Dialog open={openConfirmDialog} onClose={handleCloseConfirmDialog}>
+              <DialogTitle>Delete confirmation</DialogTitle>
+              <DialogContent>
+                <Typography>Are you sure you want to delete this relationship?</Typography>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCloseConfirmDialog} color="primary">Cancel</Button>
+                <Button onClick={handleConfirmDelete} color="error">Delete</Button>
+              </DialogActions>
+            </Dialog>
 
-        </Paper>
-      ) : (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
-          <CircularProgress />
-        </div>
-      )}
+          </Paper>
+        ) : (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+            <CircularProgress />
+          </div>
+        )}
+      </div>
+
+     
     </div>
   );
 };

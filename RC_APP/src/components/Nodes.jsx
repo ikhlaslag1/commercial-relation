@@ -3,10 +3,10 @@ import {
   Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TablePagination, TableRow, Typography, Divider,
   Button, Box, Stack, TextField, Autocomplete, Dialog,
-  DialogActions, DialogContent, DialogContentText, DialogTitle, Grid, IconButton
+  DialogActions, DialogContent, DialogContentText, DialogTitle, Grid, IconButton, Tooltip
 } from "@mui/material";
 
-import { AddCircle as AddCircleIcon, Info as InfoIcon, AddLink as AddLinkIcon,Link as LinkIcon, Edit as EditIcon, Delete as DeleteIcon, Close as CloseIcon } from "@mui/icons-material";
+import { AddCircle as AddCircleIcon, Info as InfoIcon, AddLink as AddLinkIcon, Link as LinkIcon, Edit as EditIcon, Delete as DeleteIcon, Close as CloseIcon } from "@mui/icons-material";
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -98,7 +98,6 @@ export default function PersonList() {
 
   const handleDeleteClick = async () => {
     try {
-      
       const response = await axios.get(`http://localhost:5000/nodes/checkRelationships/personne/${selectedNode.id}`);
       if (response.data.hasRelationships) {
         setConfirmMessage('This person has relationships. Deleting this person will also delete all associated relationships. Are you sure you want to proceed?');
@@ -179,9 +178,15 @@ export default function PersonList() {
                   <TableCell align="left">{row.email}</TableCell>
                   <TableCell align="left">
                     <Stack spacing={2} direction="row">
-                      <AddLinkIcon style={{ fontSize: "20px", color: "orange", cursor: "pointer" }} onClick={() => handleClickOpen(row.id)} />
-                      <LinkIcon style={{ fontSize: "20px", color: "blue", cursor: "pointer" }} onClick={() => handleRelationsClick(row.id)} />
-                      <InfoIcon style={{ fontSize: "20px", color: "green", cursor: "pointer" }} onClick={() => handleDetailsOpen(row)} />
+                      <Tooltip title="Associate" arrow>
+                        <AddLinkIcon style={{ fontSize: "20px", color: "orange", cursor: "pointer" }} onClick={() => handleClickOpen(row.id)} />
+                      </Tooltip>
+                      <Tooltip title="View Relations" arrow>
+                        <LinkIcon style={{ fontSize: "20px", color: "blue", cursor: "pointer" }} onClick={() => handleRelationsClick(row.id)} />
+                      </Tooltip>
+                      <Tooltip title="View Details" arrow>
+                        <InfoIcon style={{ fontSize: "20px", color: "green", cursor: "pointer" }} onClick={() => handleDetailsOpen(row)} />
+                      </Tooltip>
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -229,6 +234,10 @@ export default function PersonList() {
                         <TableCell>{selectedNode.id}</TableCell>
                       </TableRow>
                       <TableRow>
+                        <TableCell><strong>UUID:</strong></TableCell>
+                        <TableCell>{selectedNode.uuid}</TableCell>
+                      </TableRow>
+                      <TableRow>
                         <TableCell><strong>Name:</strong></TableCell>
                         <TableCell>{selectedNode.nom}</TableCell>
                       </TableRow>
@@ -255,15 +264,14 @@ export default function PersonList() {
                       <TableRow>
                         <TableCell><strong>Address:</strong></TableCell>
                         <TableCell>{selectedNode.adresse}</TableCell>
-                        </TableRow>
-                        <TableRow>
+                      </TableRow>
+                      <TableRow>
                         <TableCell><strong>Created at:</strong></TableCell>
                         <TableCell>{selectedNode.createdAt}</TableCell>
-                        </TableRow>
-                        <TableRow>
+                      </TableRow>
+                      <TableRow>
                         <TableCell><strong>Updated at:</strong></TableCell>
                         <TableCell>{selectedNode.updatedAt}</TableCell>
-                        
                       </TableRow>
                     </TableBody>
                   </Table>
@@ -276,7 +284,7 @@ export default function PersonList() {
           <IconButton color="primary" onClick={handleEditClick}>
             <EditIcon />
           </IconButton>
-          <IconButton style={{ color: 'red' }}  onClick={handleDeleteClick}>
+          <IconButton style={{ color: 'red' }} onClick={handleDeleteClick}>
             <DeleteIcon />
           </IconButton>
           <IconButton color="default" onClick={handleDetailsClose}>
@@ -295,7 +303,7 @@ export default function PersonList() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseConfirmDialog} color="primary">Cancel</Button>
-          <Button onClick={handleConfirmDelete} style={{ color: 'red' }} >Delete</Button>
+          <Button onClick={handleConfirmDelete} style={{ color: 'red' }}>Delete</Button>
         </DialogActions>
       </Dialog>
     </>
