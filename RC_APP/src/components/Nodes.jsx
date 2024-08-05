@@ -233,7 +233,7 @@ export default function PersonList() {
                         <TableCell><strong>ID:</strong></TableCell>
                         <TableCell>{selectedNode.id}</TableCell>
                       </TableRow>
-                      <TableRow>
+                       <TableRow>
                         <TableCell><strong>UUID:</strong></TableCell>
                         <TableCell>{selectedNode.uuid}</TableCell>
                       </TableRow>

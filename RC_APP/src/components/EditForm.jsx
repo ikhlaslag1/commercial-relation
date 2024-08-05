@@ -92,7 +92,7 @@ const EditForm = () => {
                 name="age"
                 value={formData.age}
                 onChange={handleChange}
-                type="number"
+                type="date"
               />
             </Grid>
             <Grid item xs={12}>

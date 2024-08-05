@@ -1,258 +1,358 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
 import {
-    Container, Typography, Card, CardContent, CardHeader, Grid, Alert,
-    Box, TextField, Autocomplete, IconButton, MenuItem, Select, FormControl, InputLabel, Pagination
+  Container, Typography, Card, CardContent, Box, TextField, IconButton, Select, FormControl, InputLabel, MenuItem,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Checkbox, Dialog, DialogTitle, DialogContent,
+  DialogActions, Button, Grid, Pagination, Alert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import InfoIcon from '@mui/icons-material/Info';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import axios from 'axios';
 
 const Arrow = () => (
-    <Box sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '20px',
-        height: '20px',
-        '&::after': {
-            content: '""',
-            display: 'block',
-            width: 0,
-            height: 0,
-            borderTop: '10px solid transparent',
-            borderBottom: '10px solid transparent',
-            borderLeft: '10px solid #3f51b5',
-        }
-    }} />
+  <Box sx={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '20px',
+    height: '20px',
+    '&::after': {
+      content: '""',
+      display: 'block',
+      width: 0,
+      height: 0,
+      borderTop: '10px solid transparent',
+      borderBottom: '10px solid transparent',
+      borderLeft: '10px solid #3f51b5',
+    }
+  }} />
 );
 
-const SearchRelations = () => {
-    const [nodeName1, setNodeName1] = useState('');
-    const [nodeName2, setNodeName2] = useState('');
-    const [persons, setPersons] = useState([]);
-    const [organizations, setOrganizations] = useState([]);
-    const [relations, setRelations] = useState([]);
-    const [error, setError] = useState('');
-    const [options, setOptions] = useState([]);
-    const [noRelationsFound, setNoRelationsFound] = useState(false);
-    const [filterOption, setFilterOption] = useState('all');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [relationsPerPage, setRelationsPerPage] = useState(5);
+const PathSearch = () => {
+  const [node1, setNode1] = useState('');
+  const [node2, setNode2] = useState('');
+  const [node1Results, setNode1Results] = useState([]);
+  const [node2Results, setNode2Results] = useState([]);
+  const [selectedNode1, setSelectedNode1] = useState(null);
+  const [selectedNode2, setSelectedNode2] = useState(null);
+  const [pathType, setPathType] = useState('shortest');
+  const [paths, setPaths] = useState([]);
+  const [selectedNode1Ids, setSelectedNode1Ids] = useState([]);
+  const [selectedNode2Ids, setSelectedNode2Ids] = useState([]);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedProperties, setSelectedProperties] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const relationsPerPage = 5;
 
-    useEffect(() => {
-        const fetchAllNodes = async () => {
-            try {
-                const response = await axios.get('http://localhost:5000/nodes/all');
-                if (response.data) {
-                    setPersons(response.data.persons || []);
-                    setOrganizations(response.data.organizations || []);
-                    setOptions([...response.data.persons, ...response.data.organizations] || []);
-                } else {
-                    console.error('Invalid data format for nodes:', response.data);
-                }
-            } catch (error) {
-                console.error('Error fetching all nodes:', error);
-            }
-        };
+  const handleNode1Change = (event) => setNode1(event.target.value);
 
-        fetchAllNodes();
-    }, []);
+  const handleNode2Change = (event) => setNode2(event.target.value);
 
-    const transformRelations = (paths) => {
-        return paths.map((path) => ({
-            nodes: path.nodes.map((segment, index) => ({
-                start: segment.start,
-                end: segment.end,
-                relationship: path.relationships[index] || {}
-            })),
-        }));
-    };
+  const handleSearchNode1 = async () => {
+    if (node1.length > 2) {
+      try {
+        const response = await axios.post(`http://localhost:5000/nodes/search?nodeName=${node1}`);
+        setNode1Results(response.data.nodes);
+      } catch (error) {
+        console.error('Error fetching node1 results:', error);
+      }
+    }
+  };
 
-    const fetchShortestPaths = async () => {
-        try {
-            const response = await axios.get(
-                `http://localhost:5000/relations/allBetween/${nodeName1}/${nodeName2}`
-            );
-            const transformedRelations = transformRelations(response.data);
-            const uniqueRelations = removeDuplicatePaths(transformedRelations);
-            setRelations(uniqueRelations);
-            setNoRelationsFound(uniqueRelations.length === 0);
-        } catch (error) {
-            console.error('Error fetching shortest paths:', error);
-            setError('Error fetching shortest paths. Please try again.');
-        }
-    };
+  const handleSearchNode2 = async () => {
+    if (node2.length > 2) {
+      try {
+        const response = await axios.post(`http://localhost:5000/nodes/search?nodeName=${node2}`);
+        setNode2Results(response.data.nodes);
+      } catch (error) {
+        console.error('Error fetching node2 results:', error);
+      }
+    }
+  };
 
-    const fetchAllPaths = async () => {
-        try {
-            const response = await axios.get(
-                `http://localhost:5000/relations/paths/${nodeName1}/${nodeName2}`
-            );
-            const transformedRelations = transformRelations(response.data);
-            const uniqueRelations = removeDuplicatePaths(transformedRelations);
-            setRelations(uniqueRelations);
-            setNoRelationsFound(uniqueRelations.length === 0);
-        } catch (error) {
-            console.error('Error fetching relations:', error);
-            setError('Error fetching relations. Please try again.');
-        }
-    };
+  const handleSelectNode1 = (node) => {
+    setSelectedNode1(node);
+    setNode1Results([]);
+    setNode1(node.nom);
+  };
 
-    const handleSearch = async () => {
-        setError('');
-        setCurrentPage(1); 
-        if (filterOption === 'shortest') {
-            await fetchShortestPaths();
-        } else {
-            await fetchAllPaths();
-        }
-    };
+  const handleSelectNode2 = (node) => {
+    setSelectedNode2(node);
+    setNode2Results([]);
+    setNode2(node.nom);
+  };
 
-    const removeDuplicatePaths = (paths) => {
-        const seenPaths = new Set();
-        return paths.filter(path => {
-            const pathString = path.nodes.map(node =>
-                `${node.start.nom}-${node.end.nom}-${node.relationship.type}`).join('|');
-            if (seenPaths.has(pathString)) {
-                return false;
-            } else {
-                seenPaths.add(pathString);
-                return true;
-            }
-        });
-    };
+  const handleSearch = async () => {
+    if (selectedNode1 && selectedNode2) {
+      const endpoint = pathType === 'shortest'
+        ? `http://localhost:5000/relations/allBetween/${selectedNode1.uuid}/${selectedNode2.uuid}`
+        : `http://localhost:5000/relations/paths/${selectedNode1.uuid}/${selectedNode2.uuid}`;
 
-    const indexOfLastRelation = currentPage * relationsPerPage;
-    const indexOfFirstRelation = indexOfLastRelation - relationsPerPage;
-    const currentRelations = relations.slice(indexOfFirstRelation, indexOfLastRelation);
+      try {
+        const response = await axios.get(endpoint);
+        setPaths(response.data);
+      } catch (error) {
+        console.error('Error fetching paths:', error);
+      }
+    }
+  };
 
-    const handlePageChange = (event, value) => {
-        setCurrentPage(value);
-    };
-
-    return (
-        <Container maxWidth="lg">
-            <Typography gutterBottom variant="h4" component="div" sx={{ padding: "20px", textAlign: "center", fontWeight: "bold" }}>
-                Search Relations
-            </Typography>
-
-            <Card sx={{ mb: 3 }}>
-                <CardContent>
-                    <Box
-                        display="flex"
-                        justifyContent="center"
-                        alignItems="center"
-                        gap={2}
-                        flexDirection="row"
-                    >
-                        <FormControl sx={{ minWidth: 150 }}>
-                            <InputLabel>Paths</InputLabel>
-                            <Select
-                                value={filterOption}
-                                onChange={(event) => setFilterOption(event.target.value)}
-                                label="Filter"
-                                size="small" 
-                            >
-                                <MenuItem value="all">All</MenuItem>
-                                <MenuItem value="shortest">Shortest</MenuItem>
-                            </Select>
-                        </FormControl>
-
-                        <Autocomplete
-                            disablePortal
-                            options={options}
-                            getOptionLabel={(option) => option.nom || ''}
-                            onChange={(event, newValue) => setNodeName1(newValue ? newValue.nom : '')}
-                            renderInput={(params) => (
-                                <TextField {...params} label="Select Name 1" variant="outlined" size="small" />
-                            )}
-                            sx={{ width: 250 }}
-                        />
-                        <Autocomplete
-                            disablePortal
-                            options={options}
-                            getOptionLabel={(option) => option.nom || ''}
-                            onChange={(event, newValue) => setNodeName2(newValue ? newValue.nom : '')}
-                            renderInput={(params) => (
-                                <TextField {...params} label="Select Name 2" variant="outlined" size="small" />
-                            )}
-                            sx={{ width: 250 }}
-                        />
-                        <IconButton
-                            color="primary"
-                            onClick={handleSearch}
-                            aria-label="search"
-                            sx={{ fontSize: 50 }}
-                        >
-                            <SearchIcon />
-                        </IconButton>
-                    </Box>
-                </CardContent>
-            </Card>
-
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-            {noRelationsFound && !error && (
-                <Box display="flex" justifyContent="center" alignItems="center" height="100px">
-                    <Typography variant="body1" color="textSecondary">
-                        No paths found between the selected names.
-                    </Typography>
-                </Box>
-            )}
-
-            {currentRelations.length > 0 && (
-                <Grid container spacing={3} direction="row" alignItems="flex-start">
-                    {currentRelations.map((relation, index) => (
-                        <Grid item xs={12} key={index}>
-                            <Card variant="outlined">
-                                <CardHeader title={`Path ${indexOfFirstRelation + index + 1}`} />
-                                <CardContent>
-                                    <Box
-                                        display="flex"
-                                        flexDirection="row"
-                                        alignItems="center"
-                                        sx={{
-                                            overflowX: relation.nodes.length > 4 ? 'auto' : 'hidden',
-                                            whiteSpace: 'nowrap',
-                                            maxWidth: '100%' 
-                                        }}
-                                    >
-                                        {relation.nodes.map((node, nodeIndex) => (
-                                            <React.Fragment key={nodeIndex}>
-                                                {nodeIndex > 0 && <Arrow />} 
-                                                <Card sx={{ minWidth: 250, mr: 2, borderRadius: 2, boxShadow: 3, display: 'inline-block' }}>
-                                                    <CardContent>
-                                                        <Typography variant="body2">
-                                                            <strong>From:</strong> {node.start.nom || 'Unknown'}
-                                                        </Typography>
-                                                        <Typography variant="body2">
-                                                            <strong>To:</strong> {node.end.nom || 'Unknown'}
-                                                        </Typography>
-                                                        <Typography variant="body2">
-                                                            <strong>Type:</strong> {node.relationship.type || 'Unknown'}
-                                                        </Typography>
-                                                    </CardContent>
-                                                </Card>
-                                            </React.Fragment>
-                                        ))}
-                                    </Box>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    ))}
-                </Grid>
-            )}
-
-            {relations.length > 0 && (
-                <Box display="flex" justifyContent="center" mt={3}>
-                    <Pagination
-                        count={Math.ceil(relations.length / relationsPerPage)}
-                        page={currentPage}
-                        onChange={handlePageChange}
-                        color="primary"
-                    />
-                </Box>
-            )}
-        </Container>
+  const handleNode1Select = (nodeId) => {
+    setSelectedNode1Ids(prevState =>
+      prevState.includes(nodeId) ? prevState.filter(id => id !== nodeId) : [...prevState, nodeId]
     );
+  };
+
+  const handleNode2Select = (nodeId) => {
+    setSelectedNode2Ids(prevState =>
+      prevState.includes(nodeId) ? prevState.filter(id => id !== nodeId) : [...prevState, nodeId]
+    );
+  };
+
+  const handleOpenDialog = (properties) => {
+    setSelectedProperties(properties);
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setSelectedProperties(null);
+  };
+
+  const indexOfLastRelation = currentPage * relationsPerPage;
+  const indexOfFirstRelation = indexOfLastRelation - relationsPerPage;
+  const currentRelations = paths.slice(indexOfFirstRelation, indexOfLastRelation);
+
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  return (
+    <Container maxWidth="lg">
+      <Typography gutterBottom variant="h4" component="div" sx={{ padding: "20px", textAlign: "center", fontWeight: "bold" }}>
+        Path Search
+      </Typography>
+
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box display="flex" justifyContent="center" alignItems="center" gap={2} flexDirection="row">
+            <TextField
+              label="Name 1"
+              value={node1}
+              onChange={handleNode1Change}
+              size="small"
+              sx={{ width: 250 }}
+              InputProps={{
+                endAdornment: (
+                  <IconButton onClick={handleSearchNode1}>
+                    <SearchIcon />
+                  </IconButton>
+                ),
+              }}
+            />
+
+            <TextField
+              label="Name 2"
+              value={node2}
+              onChange={handleNode2Change}
+              size="small"
+              sx={{ width: 250 }}
+              InputProps={{
+                endAdornment: (
+                  <IconButton onClick={handleSearchNode2}>
+                    <SearchIcon />
+                  </IconButton>
+                ),
+              }}
+            />
+
+            <FormControl sx={{ minWidth: 150 }}>
+              <InputLabel>Path Type</InputLabel>
+              <Select
+                value={pathType}
+                onChange={(e) => setPathType(e.target.value)}
+                label="Path Type"
+                size="small"
+              >
+                <MenuItem value="shortest">Shortest</MenuItem>
+                <MenuItem value="all">All</MenuItem>
+              </Select>
+            </FormControl>
+
+            {selectedNode1 && selectedNode2 && (
+              <IconButton
+                color="primary"
+                onClick={handleSearch}
+                aria-label="search"
+                sx={{ fontSize: 50 }}
+              >
+                <SearchIcon />
+              </IconButton>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Node 1 Results Table */}
+      {node1Results.length > 0 && (
+        <TableContainer component={Paper} sx={{ mt: 3 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Select</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>City</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Age</TableCell>
+                <TableCell>Industry</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {node1Results.map((node) => (
+                <TableRow key={node.uuid} onClick={() => handleSelectNode1(node)}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedNode1Ids.includes(node.uuid)}
+                      onChange={() => handleNode1Select(node.uuid)}
+                    />
+                  </TableCell>
+                  <TableCell>{node.nom}</TableCell>
+                  <TableCell>{node.type}</TableCell>
+                  <TableCell>{node.ville || 'N/A'}</TableCell>
+                  <TableCell>{node.email || 'N/A'}</TableCell>
+                  <TableCell>{node.age || 'N/A'}</TableCell>
+                  <TableCell>{node.industry || 'N/A'}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Node 2 Results Table */}
+      {node2Results.length > 0 && (
+        <TableContainer component={Paper} sx={{ mt: 3 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Select</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>City</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Age</TableCell>
+                <TableCell>Industry</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {node2Results.map((node) => (
+                <TableRow key={node.uuid} onClick={() => handleSelectNode2(node)}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedNode2Ids.includes(node.uuid)}
+                      onChange={() => handleNode2Select(node.uuid)}
+                    />
+                  </TableCell>
+                  <TableCell>{node.nom}</TableCell>
+                  <TableCell>{node.type}</TableCell>
+                  <TableCell>{node.ville || 'N/A'}</TableCell>
+                  <TableCell>{node.email || 'N/A'}</TableCell>
+                  <TableCell>{node.age || 'N/A'}</TableCell>
+                  <TableCell>{node.industry || 'N/A'}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+    {/* Paths Display */}
+{currentRelations.length > 0 && (
+  <Grid container spacing={3}>
+    {currentRelations.map((path, pathIndex) => (
+      <Grid item xs={12} key={pathIndex}>
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Path {indexOfFirstRelation + pathIndex + 1}</Typography>
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              overflowX: 'auto', // Add horizontal scrolling
+              padding: 1
+            }}>
+              {path.nodes.map((node, nodeIndex) => (
+                <React.Fragment key={nodeIndex}>
+                  {nodeIndex > 0 && (
+                    <React.Fragment>
+                      <ArrowForwardIcon sx={{ marginX: 1 }} />
+                    </React.Fragment>
+                  )}
+                  <Card sx={{ minWidth: 250, mr: 2, borderRadius: 2, boxShadow: 3, display: 'inline-block' }}>
+                    <CardContent>
+                      <Typography variant="body2">
+                        <strong>From:</strong> {node.start.nom || 'Unknown'}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>To:</strong> {node.end.nom || 'Unknown'}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mr: 1 }}>
+                        <strong>Relationship:</strong> {path.relationships[nodeIndex]?.type || 'Unknown'}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </React.Fragment>
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+    ))}
+  </Grid>
+)}
+      {paths.length > 0 && (
+        <Box display="flex" justifyContent="center" mt={3}>
+          <Pagination
+            count={Math.ceil(paths.length / relationsPerPage)}
+            page={currentPage}
+            onChange={handlePageChange}
+            color="primary"
+          />
+        </Box>
+      )}
+
+      {/* Dialog for Relationship Properties */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm">
+        <DialogTitle>Relationship Properties</DialogTitle>
+        <DialogContent>
+          {selectedProperties && (
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>Property</strong></TableCell>
+                  <TableCell><strong>Value</strong></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {Object.entries(selectedProperties).map(([key, value]) => (
+                  <TableRow key={key}>
+                    <TableCell>{key}</TableCell>
+                    <TableCell>{value}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
+  );
 };
 
-export default SearchRelations;
+export default PathSearch;

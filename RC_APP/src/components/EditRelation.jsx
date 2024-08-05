@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { TextField, Button, CircularProgress, Paper, Typography } from '@mui/material';
+import { TextField, Button, CircularProgress, Paper, Typography, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
 
 const EditRelation = () => {
   const { id } = useParams();
   const [relation, setRelation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [formValues, setFormValues] = useState({});
+  const [newType, setNewType] = useState('');
+  const [relationTypes, setRelationTypes] = useState(['TRAVAILLE', 'ETUDE', 'FAMILLE', 'COLLABORATION', 'AMITIE']); // Example types
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,6 +21,7 @@ const EditRelation = () => {
         if (response.data && Object.keys(response.data).length > 0) {
           setRelation(response.data);
           setFormValues(response.data.relationshipProperties || {});
+          setNewType(response.data.relationType || '');
         } else {
           console.warn('No relation data returned or empty data object');
           setRelation(null);
@@ -42,12 +45,20 @@ const EditRelation = () => {
     });
   };
 
+  const handleTypeChange = (e) => {
+    setNewType(e.target.value);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
-      await axios.put(`http://localhost:5000/relations/update/${id}`, {  type: relation.relationType,relationshipProperties: formValues });
-      navigate(-1); // Go back to the previous page
+      if (newType === relation.relationType) {
+        await axios.put(`http://localhost:5000/relations/update/${id}`, { type: relation.relationType, relationshipProperties: formValues });
+      } else {
+          await axios.put(`http://localhost:5000/relations/${id}/changeType`, { newType,relationshipProperties: formValues });
+      }
+      navigate(-1); 
     } catch (error) {
       console.error('Error updating relation:', error);
       alert('Failed to update relation. Please try again.');
@@ -66,40 +77,42 @@ const EditRelation = () => {
     return <Typography>Relation not found.</Typography>;
   }
 
-  const { nodeName, relationType, relatedNodeName } = relation;
-
   return (
     <Paper elevation={3} style={{ padding: '20px' }}>
       <Typography variant="h5" gutterBottom>Edit Relation</Typography>
       <form onSubmit={handleSubmit}>
         <TextField
           label="Name"
-          value={nodeName || ''}
+          value={relation.nodeName || ''}
           InputProps={{
             readOnly: true,
           }}
           fullWidth
           margin="normal"
         />
+       
         <TextField
-          label="Relation Type"
-          value={relationType || ''}
+          label="Associated Name"
+          value={relation.relatedNodeName || ''}
           InputProps={{
             readOnly: true,
           }}
           fullWidth
           margin="normal"
         />
-        <TextField
-          label="Associated Node"
-          value={relatedNodeName || ''}
-          InputProps={{
-            readOnly: true,
-          }}
-          fullWidth
-          margin="normal"
-        />
-        {relationType === 'TRAVAILLE' && (
+        <FormControl fullWidth margin="normal">
+          <InputLabel>Relation Type</InputLabel>
+          <Select
+            value={newType}
+            onChange={handleTypeChange}
+            label=" Relation Type"
+          >
+            {relationTypes.map((type) => (
+              <MenuItem key={type} value={type}>{type}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        {newType === 'TRAVAILLE' && (
           <TextField
             label="Position"
             name="position"
@@ -109,7 +122,7 @@ const EditRelation = () => {
             margin="normal"
           />
         )}
-        {relationType === 'ETUDE' && (
+        {newType === 'ETUDE' && (
           <>
             <TextField
               label="Field"
@@ -129,7 +142,7 @@ const EditRelation = () => {
             />
           </>
         )}
-        {relationType === 'FAMILLE' && (
+        {newType === 'FAMILLE' && (
           <TextField
             label="Type"
             name="type"
@@ -139,7 +152,7 @@ const EditRelation = () => {
             margin="normal"
           />
         )}
-        {relationType === 'COLLABORATION' && (
+        {newType === 'COLLABORATION' && (
           <>
             <TextField
               label="Project"

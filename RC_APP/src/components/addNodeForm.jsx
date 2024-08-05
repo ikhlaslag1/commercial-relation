@@ -6,7 +6,6 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import MenuItem from "@mui/material/MenuItem";
 
 export default function AddNodeForm() {
   const [formData, setFormData] = useState({
@@ -16,7 +15,7 @@ export default function AddNodeForm() {
     email: '',
     telephone: '', 
     age: '', 
-    status: '' ,
+    status: '',
     type: 'personne'
   });
   const navigate = useNavigate();
@@ -53,7 +52,6 @@ export default function AddNodeForm() {
       </Typography>
       <Divider />
       <form onSubmit={handleSubmit}>
-      
         <TextField
           name="nom"
           label="Name"
@@ -94,38 +92,40 @@ export default function AddNodeForm() {
           onChange={handleChange}
           required
         />
-         <TextField
-              name="telephone"
-              label="Telephone"
-              variant="outlined"
-              fullWidth
-              margin="normal"
-              value={formData.telephone}
-              onChange={handleChange}
-              required
-            />
-       
-            <TextField
-              name="age"
-              label="Age"
-              variant="outlined"
-              fullWidth
-              margin="normal"
-              value={formData.age}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              name="status"
-              label="Status"
-              variant="outlined"
-              fullWidth
-              margin="normal"
-              value={formData.status}
-              onChange={handleChange}
-              required
-            />
-        
+        <TextField
+          name="telephone"
+          label="Telephone"
+          variant="outlined"
+          fullWidth
+          margin="normal"
+          value={formData.telephone}
+          onChange={handleChange}
+          required
+        />
+        <TextField
+          name="age" 
+          label="Date of Birth"
+          type="date"
+          variant="outlined"
+          fullWidth
+          margin="normal"
+          value={formData.age}
+          onChange={handleChange}
+          InputLabelProps={{
+            shrink: true, // Ensures the label stays above the input
+          }}
+          required
+        />
+        <TextField
+          name="status"
+          label="Status"
+          variant="outlined"
+          fullWidth
+          margin="normal"
+          value={formData.status}
+          onChange={handleChange}
+          required
+        />
         <Button
           type="submit"
           variant="contained"

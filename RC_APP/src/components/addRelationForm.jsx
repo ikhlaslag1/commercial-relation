@@ -96,8 +96,8 @@ const AssociateForm = () => {
       await axios.post('http://localhost:5000/relations/add', relation);
       alert('Relation created successfully!');
       const redirectPath = selectedNode.type === 'Personne'
-        ? `/persDetails/personne/${id}`
-        : `/orgDetails/organization/${id}`;
+        ? `/relations/personne/${id}`
+        : `/relations/organization/${id}`;
       navigate(redirectPath);
     } catch (error) {
       console.error('Error creating relation:', error);
