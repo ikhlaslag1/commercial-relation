@@ -2,17 +2,17 @@ import React, { useEffect, useState } from "react";
 import {
   Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TablePagination, TableRow, Typography, Divider,
-  Button, Box, Stack, TextField, Autocomplete, Dialog,
-  DialogActions, DialogContent, DialogContentText, DialogTitle, Grid, IconButton, Tooltip
+  Button, Box, Stack, TextField, IconButton, Tooltip, Dialog,
+  DialogActions, DialogContent, DialogContentText, DialogTitle, Grid
 } from "@mui/material";
-
+import SearchIcon from '@mui/icons-material/Search';
 import { AddCircle as AddCircleIcon, Info as InfoIcon, AddLink as AddLinkIcon, Link as LinkIcon, Edit as EditIcon, Delete as DeleteIcon, Close as CloseIcon } from "@mui/icons-material";
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 export default function PersonList() {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
   const [rows, setRows] = useState([]);
   const [filteredRows, setFilteredRows] = useState([]);
   const [totalRows, setTotalRows] = useState(0);
@@ -23,20 +23,22 @@ export default function PersonList() {
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [deletingPersonId, setDeletingPersonId] = useState(null);
+  const [villeTerm, setVilleTerm] = useState('');
+  const [adresseTerm, setAdresseTerm] = useState('');
+  const [statusTerm, setStatusTerm] = useState('');
 
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();
-  }, [page, rowsPerPage, searchTerm]);
+  }, [page, rowsPerPage]);
 
   const fetchData = async () => {
     try {
       const response = await axios.get('http://localhost:5000/nodes/pers', {
         params: {
           page: page,
-          limit: rowsPerPage,
-          name: searchTerm
+          limit: rowsPerPage
         }
       });
       const { personnes, total } = response.data;
@@ -48,6 +50,26 @@ export default function PersonList() {
     }
   };
 
+  const handleSearch = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/nodes/pers', {
+        params: {
+          page: page,
+          limit: rowsPerPage,
+          name: searchTerm,
+          ville: villeTerm,
+          adresse: adresseTerm,
+          status: statusTerm
+        }
+      });
+      const { personnes, total } = response.data;
+      setFilteredRows(personnes);
+      setTotalRows(total);
+    } catch (error) {
+      console.error('Error searching nodes:', error);
+    }
+  };
+  
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -128,10 +150,6 @@ export default function PersonList() {
     setDeletingPersonId(null);
   };
 
-  const handleSearchChange = (event, newValue) => {
-    setSearchTerm(newValue ? newValue.nom : '');
-  };
-
   return (
     <>
       <Paper sx={{ width: "98%", overflow: "hidden", padding: "12px" }}>
@@ -140,31 +158,59 @@ export default function PersonList() {
         </Typography>
         <Divider />
         <Box height={10} />
-        <Stack direction="row" spacing={2} className="my-2 mb-2" alignItems="center">
-          <Autocomplete
-            disablePortal
-            id="combo-box-demo"
-            options={rows}
-            sx={{ width: 300 }}
-            getOptionLabel={(row) => row.nom || ""}
-            onChange={handleSearchChange}
-            renderInput={(params) => (
-              <TextField {...params} size="small" label="Search Person" />
-            )}
-          />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}></Typography>
-          <Button variant="contained" endIcon={<AddCircleIcon />} onClick={handleAddClick}>
-            Add
-          </Button>
-        </Stack>
+        <Box sx={{ padding: "16px" }}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <TextField
+              label="Name"
+              variant="outlined"
+              size="small"
+              sx={{ width: 150 }}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+            <TextField
+              label="City"
+              variant="outlined"
+              size="small"
+              sx={{ width: 150 }}
+              onChange={(event) => setVilleTerm(event.target.value)}
+            />
+            <TextField
+              label="Address"
+              variant="outlined"
+              size="small"
+              sx={{ width: 150 }}
+              onChange={(event) => setAdresseTerm(event.target.value)}
+            />
+            <TextField
+              label="Status"
+              variant="outlined"
+              size="small"
+              sx={{ width: 150 }}
+              onChange={(event) => setStatusTerm(event.target.value)}
+            />
+            <IconButton
+              color="primary"
+              onClick={handleSearch}
+              aria-label="search"
+              sx={{ fontSize: 50 }}
+            >
+              <SearchIcon />
+            </IconButton>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}></Typography>
+            <Button variant="contained" endIcon={<AddCircleIcon />} onClick={handleAddClick}>
+              Add
+            </Button>
+          </Stack>
+        </Box>
+
         <Box height={10} />
         <TableContainer>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>
                 <TableCell align="left"><strong>Name</strong></TableCell>
-                <TableCell align="left"><strong>Ville</strong></TableCell>
-                <TableCell align="left"><strong>Adresse</strong></TableCell>
+                <TableCell align="left"><strong>City</strong></TableCell>
+                <TableCell align="left"><strong>Address</strong></TableCell>
                 <TableCell align="left"><strong>Email</strong></TableCell>
                 <TableCell align="left"><strong>Actions</strong></TableCell>
               </TableRow>
@@ -205,105 +251,61 @@ export default function PersonList() {
         />
       </Paper>
 
-      {/* Associate Node Dialog */}
-      <Dialog open={open} onClose={handleClose} aria-labelledby="alert-dialog-title" aria-describedby="alert-dialog-description">
-        <DialogTitle id="alert-dialog-title">{"Associate Person"}</DialogTitle>
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Associate Node</DialogTitle>
         <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Do you want to associate this Person?
+          <DialogContentText>
+            Would you like to associate this person with another node?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={associateNode} autoFocus>Associate</Button>
+          <Button onClick={handleClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={associateNode} color="primary">
+            Associate
+          </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Details Dialog */}
-      <Dialog open={detailsOpen} onClose={handleDetailsClose} aria-labelledby="details-dialog-title" aria-describedby="details-dialog-description">
-        <DialogTitle id="details-dialog-title">{"Details"}</DialogTitle>
+      <Dialog open={detailsOpen} onClose={handleDetailsClose}>
+        <DialogTitle>Person Details</DialogTitle>
         <DialogContent>
-          {selectedNode && (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Paper elevation={1} style={{ padding: '20px' }}>
-                  <Table>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell><strong>ID:</strong></TableCell>
-                        <TableCell>{selectedNode.id}</TableCell>
-                      </TableRow>
-                       <TableRow>
-                        <TableCell><strong>UUID:</strong></TableCell>
-                        <TableCell>{selectedNode.uuid}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell><strong>Name:</strong></TableCell>
-                        <TableCell>{selectedNode.nom}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell><strong>Age:</strong></TableCell>
-                        <TableCell>{selectedNode.age}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell><strong>City:</strong></TableCell>
-                        <TableCell>{selectedNode.ville}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell><strong>Status:</strong></TableCell>
-                        <TableCell>{selectedNode.status}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell><strong>Email:</strong></TableCell>
-                        <TableCell>{selectedNode.email}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell><strong>Phone number:</strong></TableCell>
-                        <TableCell>{selectedNode.telephone}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell><strong>Address:</strong></TableCell>
-                        <TableCell>{selectedNode.adresse}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell><strong>Created at:</strong></TableCell>
-                        <TableCell>{selectedNode.createdAt}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell><strong>Updated at:</strong></TableCell>
-                        <TableCell>{selectedNode.updatedAt}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </Paper>
-              </Grid>
-            </Grid>
-          )}
+          <Typography variant="h6">{selectedNode?.nom}</Typography>
+          <Typography variant="body1">Ville: {selectedNode?.ville}</Typography>
+          <Typography variant="body1">Adresse: {selectedNode?.adresse}</Typography>
+          <Typography variant="body1">Email: {selectedNode?.email}</Typography>
         </DialogContent>
         <DialogActions>
-          <IconButton color="primary" onClick={handleEditClick}>
-            <EditIcon />
-          </IconButton>
-          <IconButton style={{ color: 'red' }} onClick={handleDeleteClick}>
-            <DeleteIcon />
-          </IconButton>
-          <IconButton color="default" onClick={handleDetailsClose}>
-            <CloseIcon />
-          </IconButton>
+          <Button onClick={handleEditClick} color="primary">
+            Edit
+          </Button>
+          <Button onClick={handleDeleteClick} color="secondary">
+            Delete
+          </Button>
+          <Button onClick={handleDetailsClose} color="primary">
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Confirm Delete Dialog */}
-      <Dialog open={openConfirmDialog} onClose={handleCloseConfirmDialog} aria-labelledby="confirm-delete-dialog-title">
-        <DialogTitle id="confirm-delete-dialog-title">{"Confirm Delete"}</DialogTitle>
+      <Dialog
+        open={openConfirmDialog}
+        onClose={handleCloseConfirmDialog}
+      >
+        <DialogTitle>Confirm Deletion</DialogTitle>
         <DialogContent>
           <DialogContentText>
             {confirmMessage}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseConfirmDialog} color="primary">Cancel</Button>
-          <Button onClick={handleConfirmDelete} style={{ color: 'red' }}>Delete</Button>
+          <Button onClick={handleConfirmDelete} color="secondary">
+            Delete
+          </Button>
+          <Button onClick={handleCloseConfirmDialog} color="primary">
+            Cancel
+          </Button>
         </DialogActions>
       </Dialog>
     </>

@@ -2,24 +2,27 @@ import React, { useEffect, useState } from "react";
 import {
   Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TablePagination, TableRow, Typography, Divider,
-  Button, Box, Stack, TextField, Autocomplete, Dialog,
+  Button, Box, Stack, TextField, Dialog,
   DialogActions, DialogContent, DialogContentText, DialogTitle, Grid, IconButton, Tooltip
 } from "@mui/material";
 import {
   AddCircle as AddCircleIcon, Info as InfoIcon, Edit as EditIcon,
   Delete as DeleteIcon, Close as CloseIcon, Link as LinkIcon,
-  AddLink as AddLinkIcon
+  Search as SearchIcon, AddLink as AddLinkIcon
 } from "@mui/icons-material";
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 export default function OrganizationList() {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
   const [rows, setRows] = useState([]);
   const [filteredRows, setFilteredRows] = useState([]);
   const [totalRows, setTotalRows] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [addressFilter, setAddressFilter] = useState('');
+  const [industryFilter, setIndustryFilter] = useState('');
   const [open, setOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -32,7 +35,7 @@ export default function OrganizationList() {
 
   useEffect(() => {
     fetchData();
-  }, [page, rowsPerPage, searchTerm]);
+  }, [page, rowsPerPage]);
 
   const fetchData = async () => {
     try {
@@ -40,7 +43,10 @@ export default function OrganizationList() {
         params: {
           page: page,
           limit: rowsPerPage,
-          name: searchTerm
+          name: searchTerm,
+          city: cityFilter,
+          address: addressFilter,
+          industry: industryFilter
         }
       });
       const { organizations, total } = response.data;
@@ -49,9 +55,28 @@ export default function OrganizationList() {
       setTotalRows(total);
       const allResponse = await axios.get('http://localhost:5000/nodes/all');
       setAllOrganizations(allResponse.data.organizations);
-
     } catch (error) {
       console.error('Error fetching data:', error);
+    }
+  };
+
+  const handleSearch = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/nodes/org', {
+        params: {
+          page: page,
+          limit: rowsPerPage,
+          name: searchTerm,
+          city: cityFilter,
+          address: addressFilter,
+          industry: industryFilter
+        }
+      });
+      const { organizations, total } = response.data;
+      setFilteredRows(organizations);
+      setTotalRows(total);
+    } catch (error) {
+      console.error('Error searching nodes:', error);
     }
   };
 
@@ -136,10 +161,6 @@ export default function OrganizationList() {
     navigate(`/relations/organization/${id}`);
   };
 
-  const handleSearchChange = (event, newValue) => {
-    setSearchTerm(newValue ? newValue.nom : '');
-  };
-
   return (
     <>
       <Paper sx={{ width: "98%", overflow: "hidden", padding: "12px" }}>
@@ -148,31 +169,62 @@ export default function OrganizationList() {
         </Typography>
         <Divider />
         <Box height={10} />
+        <Box sx={{ padding: "16px" }}>
         <Stack direction="row" spacing={2} className="my-2 mb-2" alignItems="center">
-          <Autocomplete
-            disablePortal
-            id="combo-box-demo"
-            options={allOrganization}
-            sx={{ width: 300 }}
-            getOptionLabel={(row) => row.nom || ""}
-            onChange={handleSearchChange}
-            renderInput={(params) => (
-              <TextField {...params} size="small" label="Search Organization" />
-            )}
+          <TextField
+            size="small"
+            label="Name"
+            variant="outlined"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ width: 150 }}
           />
+          <TextField
+            size="small"
+            label="City"
+            variant="outlined"
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+            sx={{ width: 150 }}
+          />
+          <TextField
+            size="small"
+            label="Address"
+            variant="outlined"
+            value={addressFilter}
+            onChange={(e) => setAddressFilter(e.target.value)}
+            sx={{ width: 150 }}
+          />
+          <TextField
+            size="small"
+            label="Industry"
+            variant="outlined"
+            value={industryFilter}
+            onChange={(e) => setIndustryFilter(e.target.value)}
+            sx={{ width: 150 }}
+          />
+          <IconButton
+            color="primary"
+            onClick={handleSearch}
+            aria-label="search"
+            sx={{ fontSize: 50 }}
+          >
+            <SearchIcon />
+          </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}></Typography>
           <Button variant="contained" endIcon={<AddCircleIcon />} onClick={handleAddClick}>
             Add
           </Button>
         </Stack>
+        </Box>
         <Box height={10} />
         <TableContainer>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>
                 <TableCell align="left"><strong>Name</strong></TableCell>
-                <TableCell align="left"><strong>Ville</strong></TableCell>
-                <TableCell align="left"><strong>Adresse</strong></TableCell>
+                <TableCell align="left"><strong>City</strong></TableCell>
+                <TableCell align="left"><strong>Address</strong></TableCell>
                 <TableCell align="left"><strong>Email</strong></TableCell>
                 <TableCell align="left"><strong>Actions</strong></TableCell>
               </TableRow>
