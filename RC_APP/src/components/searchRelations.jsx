@@ -109,8 +109,8 @@ const PathSearch = () => {
     );
   };
 
-  const handleOpenDialog = (properties) => {
-    setSelectedProperties(properties);
+  const handleOpenDialog = (endNodeProperties, relationshipDetails) => {
+    setSelectedProperties({ ...endNodeProperties, ...relationshipDetails });
     setOpenDialog(true);
   };
 
@@ -267,50 +267,59 @@ const PathSearch = () => {
         </TableContainer>
       )}
 
-    {/* Paths Display */}
-{currentRelations.length > 0 && (
-  <Grid container spacing={3}>
-    {currentRelations.map((path, pathIndex) => (
-      <Grid item xs={12} key={pathIndex}>
-        <Card variant="outlined">
-          <CardContent>
-            <Typography variant="h6" gutterBottom>Path {indexOfFirstRelation + pathIndex + 1}</Typography>
-            <Box sx={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              overflowX: 'auto', // Add horizontal scrolling
-              padding: 1
-            }}>
-              {path.nodes.map((node, nodeIndex) => (
-                <React.Fragment key={nodeIndex}>
-                  {nodeIndex > 0 && (
-                    <React.Fragment>
-                      <ArrowForwardIcon sx={{ marginX: 1 }} />
-                    </React.Fragment>
-                  )}
-                  <Card sx={{ minWidth: 250, mr: 2, borderRadius: 2, boxShadow: 3, display: 'inline-block' }}>
+   {/* Paths Display */}
+      {currentRelations.length > 0 && (
+            <Grid container spacing={3}>
+              {currentRelations.map((path, pathIndex) => (
+                <Grid item xs={12} key={pathIndex}>
+                  <Card variant="outlined">
                     <CardContent>
-                      <Typography variant="body2">
-                        <strong>From:</strong> {node.start.nom || 'Unknown'}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>To:</strong> {node.end.nom || 'Unknown'}
-                      </Typography>
-                      <Typography variant="body2" sx={{ mr: 1 }}>
-                        <strong>Relationship:</strong> {path.relationships[nodeIndex]?.type || 'Unknown'}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </React.Fragment>
-              ))}
-            </Box>
-          </CardContent>
-        </Card>
-      </Grid>
-    ))}
-  </Grid>
-)}
+                      <Typography variant="h6" gutterBottom>Path {indexOfFirstRelation + pathIndex + 1}</Typography>
+                      <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        overflowX: 'auto', // Add horizontal scrolling
+                        padding: 1
+                      }}>
+                        {path.nodes.map((node, nodeIndex) => (
+                          <React.Fragment key={nodeIndex}>
+                            {nodeIndex > 0 && (
+                              <React.Fragment>
+                                <ArrowForwardIcon sx={{ marginX: 1 }} />
+                              </React.Fragment>
+                            )}
+                          <Card sx={{ minWidth: 250, mr: 2, borderRadius: 2, boxShadow: 3, display: 'inline-block' }}>
+              <CardContent sx={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="body2">
+                    <strong>From:</strong> {node.start.nom || 'Unknown'}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>To:</strong> {node.end.nom || 'Unknown'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mr: 1 }}>
+                    <strong>Relationship:</strong> {path.relationships[nodeIndex]?.type || 'Unknown'}
+                  </Typography>
+                </Box>
+              <Button 
+              endIcon={<InfoIcon />} 
+              onClick={() => handleOpenDialog(node.end, path.relationships[nodeIndex])}
+              sx={{ position: 'absolute', bottom: 8, right: 8 }}
+            >
+            </Button>
+              </CardContent>
+            </Card>
+
+                      </React.Fragment>
+                    ))}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
       {paths.length > 0 && (
         <Box display="flex" justifyContent="center" mt={3}>
           <Pagination
@@ -322,35 +331,68 @@ const PathSearch = () => {
         </Box>
       )}
 
-      {/* Dialog for Relationship Properties */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm">
-        <DialogTitle>Relationship Properties</DialogTitle>
-        <DialogContent>
-          {selectedProperties && (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell><strong>Property</strong></TableCell>
-                  <TableCell><strong>Value</strong></TableCell>
+<Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm">
+  <DialogTitle>Details</DialogTitle>
+  <DialogContent>
+    {selectedProperties && (
+      <>
+        {/* Table for all properties */}
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell><strong>{selectedProperties.nom}'s Properties</strong></TableCell>
+              
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {Object.entries(selectedProperties).map(([key, value]) => (
+              key !== 'properties' && key !== 'type' && (
+                <TableRow key={key}>
+                  <TableCell><strong>{key}</strong></TableCell>
+                  <TableCell>{typeof value === 'object' ? JSON.stringify(value) : value}</TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {Object.entries(selectedProperties).map(([key, value]) => (
-                  <TableRow key={key}>
-                    <TableCell>{key}</TableCell>
-                    <TableCell>{value}</TableCell>
+              )
+            ))}
+          </TableBody>
+        </Table>
+
+        {/* Table for specific properties */}
+        <Table >
+          <TableHead>
+            <TableRow>
+              <TableCell><strong>Relation Properties</strong></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {selectedProperties.type && (
+              <TableRow>
+                <TableCell><strong>Type</strong></TableCell>
+                <TableCell>{selectedProperties.type}</TableCell>
+              </TableRow>
+            )}
+            {selectedProperties.properties && (
+              <>
+                {Object.entries(selectedProperties.properties).map(([propKey, propValue]) => (
+                  <TableRow key={propKey}>
+                    <TableCell><strong>{propKey}</strong></TableCell>
+                    <TableCell>{propValue}</TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
+              </>
+            )}
+          </TableBody>
+        </Table>
+      </>
+    )}
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={handleCloseDialog} color="primary">
+      Close
+    </Button>
+  </DialogActions>
+</Dialog>
+
+
     </Container>
   );
 };

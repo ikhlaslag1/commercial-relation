@@ -268,24 +268,82 @@ export default function PersonList() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={detailsOpen} onClose={handleDetailsClose}>
-        <DialogTitle>Person Details</DialogTitle>
+      <Dialog open={detailsOpen} onClose={handleDetailsClose} aria-labelledby="details-dialog-title" aria-describedby="details-dialog-description">
+        <DialogTitle id="details-dialog-title">{"Details"}</DialogTitle>
         <DialogContent>
-          <Typography variant="h6">{selectedNode?.nom}</Typography>
-          <Typography variant="body1">Ville: {selectedNode?.ville}</Typography>
-          <Typography variant="body1">Adresse: {selectedNode?.adresse}</Typography>
-          <Typography variant="body1">Email: {selectedNode?.email}</Typography>
+          {selectedNode && (
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <Paper elevation={1} style={{ padding: '20px' }}>
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell><strong>ID:</strong></TableCell>
+                        <TableCell>{selectedNode.id}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><strong>UUID:</strong></TableCell>
+                        <TableCell>{selectedNode.uuid}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><strong>Name:</strong></TableCell>
+                        <TableCell>{selectedNode.nom}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><strong>Address:</strong></TableCell>
+                        <TableCell>{selectedNode.adresse}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><strong>Email:</strong></TableCell>
+                        <TableCell>{selectedNode.email}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><strong>Phone Number:</strong></TableCell>
+                        <TableCell>{selectedNode.telephone}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><strong>City:</strong></TableCell>
+                        <TableCell>{selectedNode.ville}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><strong>Status:</strong></TableCell>
+                        <TableCell>{selectedNode.status}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><strong>Birth date:</strong></TableCell>
+                        <TableCell>{selectedNode.age}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><strong>Created at:</strong></TableCell>
+                        <TableCell>{selectedNode.createdAt}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell><strong>Updated at:</strong></TableCell>
+                        <TableCell>{selectedNode.updatedAt}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </Paper>
+              </Grid>
+            </Grid>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleEditClick} color="primary">
-            Edit
-          </Button>
-          <Button onClick={handleDeleteClick} color="secondary">
-            Delete
-          </Button>
-          <Button onClick={handleDetailsClose} color="primary">
-            Close
-          </Button>
+          <Tooltip title="Edit" arrow>
+            <IconButton color="primary" onClick={handleEditClick}>
+              <EditIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Delete" arrow>
+            <IconButton style={{ color: 'red' }} onClick={handleDeleteClick}>
+              <DeleteIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Close" arrow>
+            <IconButton color="default" onClick={handleDetailsClose}>
+              <CloseIcon />
+            </IconButton>
+          </Tooltip>
         </DialogActions>
       </Dialog>
 
