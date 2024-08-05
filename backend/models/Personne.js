@@ -119,27 +119,31 @@ class Personne {
         const session = this.driver.session();
         try {
             const result = await session.run(`
-                MATCH (p:Personne {nom: $nom})
-                OPTIONAL MATCH (p)-[r]->(relatedNode)
-                RETURN id(p) as id, p.nom as nom, p.age as age, p.ville as ville, p.status as status, p.uuid as uuid,
-                       collect({type: type(r), properties: properties(relatedNode)}) as relations
+                MATCH (p:Personne)
+                WHERE toLower(p.nom) CONTAINS toLower($nom)
+                RETURN id(p) as id, p.nom as nom, p.age as age, p.ville as ville, p.status as status, p.email as email, p.telephone as telephone, p.adresse as adresse, 
+                       p.createdAt as createdAt, p.updatedAt as updatedAt, p.uuid as uuid
             `, { nom });
+            
             return result.records.map(record => ({
                 id: record.get('id').toString(),
                 nom: record.get('nom').toString(),
                 age: record.get('age').toString(),
                 ville: record.get('ville').toString(),
                 status: record.get('status').toString(),
-                uuid: record.get('uuid') ? record.get('uuid').toString() : null,
-                relations: record.get('relations').map(rel => ({
-                    type: rel.type,
-                    properties: rel.properties
-                }))
+                email: record.get('email') ? record.get('email').toString() : null,
+                telephone: record.get('telephone') ? record.get('telephone').toString() : null,
+                adresse: record.get('adresse') ? record.get('adresse').toString() : null,
+                createdAt: this.formatDate(record.get('createdAt') ? record.get('createdAt').toString() : null),
+                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null),
+                uuid: record.get('uuid') ? record.get('uuid').toString() : null
             }));
         } finally {
             await session.close();
         }
     }
+    
+    
 
     async getById(id) {
         const session = this.driver.session();

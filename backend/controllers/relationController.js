@@ -104,8 +104,8 @@ const getRelationDetails = async (req, res) => {
     const { id } = req.params;
     const { type, ...updatedParams } = req.body;
 
-    console.log('Type:', type); // Add this line to check the type
-    console.log('Updated Params:', updatedParams); // Add this line to see other parameters
+    console.log('Type:', type); 
+    console.log('Updated Params:', updatedParams);
 
     try {
         await relation.updateRelation(id, { type, ...updatedParams });
@@ -115,15 +115,31 @@ const getRelationDetails = async (req, res) => {
         res.status(500).json({ error: 'Erreur lors de la mise à jour de la relation' });
     }
 }
+async function changeRelationType(req, res) {
+    const { id } = req.params;
+    const { newType, relationshipProperties } = req.body;
+
+    try {
+        if (!newType) {
+            return res.status(400).json({ error: 'Missing new relation type' });
+        }
+
+        await relation.changeRelationType(id, newType, relationshipProperties);
+        res.json({ message: 'Relation type changed successfully' });
+    } catch (error) {
+        console.error('Erreur lors du changement du type de relation:', error);
+        res.status(500).json({ error: 'Erreur lors du changement du type de relation' });
+    }
+}
 
 async function getAllRelationsBetweenNodes(req, res) {
-    const { nodeName1, nodeName2 } = req.params;
-   
-    try {
-        console.log('nodeName1:', nodeName1);  
-        console.log('nodeName2:', nodeName2);  
+    const { nodeUuid1, nodeUuid2 } = req.params;
 
-        const paths = await relation.getAllShortedPath(nodeName1, nodeName2);
+    try {
+        console.log('nodeUuid1:', nodeUuid1);
+        console.log('nodeUuid2:', nodeUuid2);
+
+        const paths = await relation.getAllShortedPath(nodeUuid1, nodeUuid2);
         res.json(paths);
     } catch (error) {
         console.error('Error fetching relations between nodes:', error);
@@ -131,16 +147,19 @@ async function getAllRelationsBetweenNodes(req, res) {
     }
 }
 
+
 async function getAllPaths(req, res) {
-    const { nodeName1, nodeName2 } = req.params;
+    const { nodeUuid1, nodeUuid2 } = req.params;
+
     try {
-        const paths = await relation.getAllPaths(nodeName1, nodeName2);
+        const paths = await relation.getAllPaths(nodeUuid1, nodeUuid2);
         res.json(paths);
     } catch (error) {
         console.error('Error fetching all paths:', error);
         res.status(500).json({ error: 'Error fetching all paths', details: error.message });
     }
 }
+
 
 const getAllPathsDFS = async (req, res) => {
     const { nodeName1, nodeName2 } = req.params;
@@ -178,5 +197,6 @@ module.exports = {
     getAllRelationsBetweenNodes,
     getAllPathsDFS,
     getAllPaths,
-    getRelationDetails
+    getRelationDetails,
+    changeRelationType
 };

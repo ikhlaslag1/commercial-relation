@@ -126,24 +126,31 @@ class Organization {
         const session = this.driver.session();
         try {
             const result = await session.run(`
-                MATCH (o:Organization {name: $nom})
-                OPTIONAL MATCH (o)-[r]->(relatedNode)
-                RETURN id(o) as id, o.name as name, o.industry as industry,
-                       collect({type: type(r), properties: properties(relatedNode)}) as relations
+                MATCH (o:Organization)
+                WHERE toLower(o.nom) CONTAINS toLower($nom)
+                RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry, o.telephone as telephone, o.siteWeb as siteWeb,
+                       o.createdAt as createdAt, o.updatedAt as updatedAt, o.uuid as uuid
             `, { nom });
+            
             return result.records.map(record => ({
-                id: record.get('id').toString(),
-                nom: record.get('name').toString(),
-                industry: record.get('industry').toString(),
-                relations: record.get('relations').map(rel => ({
-                    type: rel.type,
-                    properties: rel.properties
-                }))
+                id: record.get('id') ? record.get('id').toString() : null,
+                nom: record.get('nom') ? record.get('nom').toString() : null,
+                ville: record.get('ville') ? record.get('ville').toString() : null,
+                adresse: record.get('adresse') ? record.get('adresse').toString() : null,
+                industry: record.get('industry') ? record.get('industry').toString() : null,
+                email: record.get('email') ? record.get('email').toString() : null,
+                telephone: record.get('telephone') ? record.get('telephone').toString() : null,
+                siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null,
+                createdAt: this.formatDate(record.get('createdAt') ? record.get('createdAt').toString() : null),
+                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null),
+                uuid: record.get('uuid') ? record.get('uuid').toString() : null
             }));
         } finally {
             await session.close();
         }
     }
+    
+    
 
     async getById(id) {
         const session = this.driver.session();

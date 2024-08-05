@@ -92,15 +92,18 @@ class Relation {
                     throw new Error(`Unsupported relation type: ${type}`);
             }
     
-            console.log('Running query:', query); 
-            console.log('With parameters:', queryParams); 
+            console.log('Running query:', query);
+            console.log('With parameters:', queryParams);
     
-            await this.session.run(query, queryParams);
+            const result = await this.session.run(query, queryParams);
+            console.log('Query result:', result); // Optional: Log result to confirm execution
+    
         } catch (error) {
             console.error('Error executing query:', error);
             throw error;
         }
     }
+    
     
     async updateRelation(id, updatedParams) {
         try {
@@ -115,7 +118,7 @@ class Relation {
                 WHERE id(r) = toInteger($relationId)
                 SET r.position = $position
               `;
-              queryParams.position = updatedParams.relationshipProperties.position; // Ensure this matches the query
+              queryParams.position = updatedParams.relationshipProperties.position; 
               break;
             case 'ETUDE':
               query = `
@@ -151,14 +154,120 @@ class Relation {
           }
       
           if (query) {
-            // Ensure `relationId` and other parameters are included
+            
             await this.session.run(query, queryParams);
           }
         } catch (error) {
           throw error;
         }
       }
-      
+  async changeRelationType(id, newType, relationshipProperties) {
+    try {
+        const findOldRelationQuery = `
+            MATCH ()-[r]->()
+            WHERE id(r) = toInteger($relationId)
+            RETURN r, startNode(r) AS startNode, endNode(r) AS endNode
+        `;
+
+        const result = await this.session.run(findOldRelationQuery, { relationId: id });
+
+        if (result.records.length === 0) {
+            throw new Error('Relation not found');
+        }
+
+        const oldRelation = result.records[0].get('r');
+        const startNode = result.records[0].get('startNode');
+        const endNode = result.records[0].get('endNode');
+        const oldProperties = oldRelation.properties;
+
+        let createNewRelationQuery = '';
+        let newProperties = {};
+
+        switch (newType) {
+            case 'TRAVAILLE':
+                createNewRelationQuery = `
+                    MATCH (startNode), (endNode)
+                    WHERE id(startNode) = toInteger($startNodeId) AND id(endNode) = toInteger($endNodeId)
+                    CREATE (startNode)-[:TRAVAILLE {position: $position}]->(endNode)
+                `;
+                newProperties = {
+                    position: relationshipProperties.position || oldProperties.position || ''
+                };
+                break;
+            case 'ETUDE':
+                createNewRelationQuery = `
+                    MATCH (startNode), (endNode)
+                    WHERE id(startNode) = toInteger($startNodeId) AND id(endNode) = toInteger($endNodeId)
+                    CREATE (startNode)-[:ETUDE {domaine: $domaine, niveau: $niveau}]->(endNode)
+                `;
+                newProperties = {
+                    domaine: relationshipProperties.domaine || oldProperties.domaine || '',
+                    niveau: relationshipProperties.niveau || oldProperties.niveau || ''
+                };
+                break;
+            case 'FAMILLE':
+                createNewRelationQuery = `
+                    MATCH (startNode), (endNode)
+                    WHERE id(startNode) = toInteger($startNodeId) AND id(endNode) = toInteger($endNodeId)
+                    CREATE (startNode)-[:FAMILLE {type: $type}]->(endNode)
+                `;
+                newProperties = {
+                    type: relationshipProperties.type || oldProperties.type || ''
+                };
+                break;
+            case 'COLLABORATION':
+                createNewRelationQuery = `
+                    MATCH (startNode), (endNode)
+                    WHERE id(startNode) = toInteger($startNodeId) AND id(endNode) = toInteger($endNodeId)
+                    CREATE (startNode)-[:COLLABORATION {projet: $projet, role: $role}]->(endNode)
+                `;
+                newProperties = {
+                    projet: relationshipProperties.projet || oldProperties.projet || '',
+                    role: relationshipProperties.role || oldProperties.role || ''
+                };
+                break;
+            case 'AMITIE':
+                createNewRelationQuery = `
+                    MATCH (startNode), (endNode)
+                    WHERE id(startNode) = toInteger($startNodeId) AND id(endNode) = toInteger($endNodeId)
+                    CREATE (startNode)-[:AMITIE]->(endNode)
+                `;
+                break;
+            default:
+                throw new Error(`Unsupported new relation type: ${newType}`);
+        }
+
+        console.log('Creating new relation with query:', createNewRelationQuery);
+        console.log('Parameters:', {
+            startNodeId: startNode.identity.toInt(),
+            endNodeId: endNode.identity.toInt(),
+            ...newProperties
+        });
+
+        await this.session.run(createNewRelationQuery, {
+            startNodeId: startNode.identity.toInt(),
+            endNodeId: endNode.identity.toInt(),
+            ...newProperties
+        });
+
+        const deleteOldRelationQuery = `
+            MATCH ()-[r]->()
+            WHERE id(r) = toInteger($relationId)
+            DELETE r
+        `;
+
+        console.log('Deleting old relation with query:', deleteOldRelationQuery);
+        console.log('Parameters:', { relationId: id });
+
+        await this.session.run(deleteOldRelationQuery, { relationId: id });
+
+        console.log('Relation type changed successfully');
+    } catch (error) {
+        console.error('Error changing relation type:', error);
+        throw error;
+    }
+}
+
     async getRelationsById(nodeId) {
         const session = this.driver.session();
         try {
@@ -257,15 +366,14 @@ class Relation {
         }
     }
 
-    async getAllShortedPath(nodeName1, nodeName2) {
+    async getAllShortedPath(nodeUuid1, nodeUuid2) {
         const session = this.driver.session();
         try {
-    
             const result = await session.run(
                 `MATCH p=allShortestPaths((a)-[*]-(b))
-                 WHERE a.nom = $nodeName1 AND b.nom = $nodeName2
+                 WHERE a.uuid = $nodeUuid1 AND b.uuid = $nodeUuid2
                  RETURN p`,
-                { nodeName1, nodeName2 }
+                { nodeUuid1, nodeUuid2 }
             );
     
             return result.records.map(record => {
@@ -276,8 +384,8 @@ class Relation {
                         end: segment.end.properties
                     })),
                     relationships: path.segments.map(segment => ({
-                        type: segment.relationship.type, 
-                        properties: segment.relationship.properties 
+                        type: segment.relationship.type,
+                        properties: segment.relationship.properties
                     }))
                 };
             });
@@ -285,14 +393,15 @@ class Relation {
             await session.close();
         }
     }
-    async getAllPaths(nodeName1, nodeName2) {
+    
+    async getAllPaths(nodeUuid1, nodeUuid2) {
         const session = this.driver.session();
         try {
             const result = await session.run(`
                 MATCH path = (a)-[*]-(b)  
-                WHERE a.nom = $nodeName1 AND b.nom = $nodeName2
+                WHERE a.uuid = $nodeUuid1 AND b.uuid = $nodeUuid2
                 RETURN path
-            `, { nodeName1, nodeName2 });
+            `, { nodeUuid1, nodeUuid2 });
     
             return result.records.map(record => {
                 const path = record.get('path');
@@ -302,8 +411,8 @@ class Relation {
                         end: segment.end.properties
                     })),
                     relationships: path.segments.map(segment => ({
-                        type: segment.relationship.type, 
-                        properties: segment.relationship.properties 
+                        type: segment.relationship.type,
+                        properties: segment.relationship.properties
                     }))
                 };
             });
@@ -311,6 +420,7 @@ class Relation {
             await session.close();
         }
     }
+    
     
     async getAllPathsDFS (nodeName1, nodeName2) {
         const session = this.driver.session();

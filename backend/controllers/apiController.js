@@ -185,13 +185,28 @@ exports.checkNodeRelationships = async (req, res) => {
 };
 
 exports.searchNodesByName = async (req, res) => {
-    const { nodeName } = req.query; 
+    const { nodeName } = req.query;
+
+    if (!nodeName) {
+        return res.status(400).send('Node name is required');
+    }
+
     try {
-        const personnes = await personne.getByNom(nodeName);
-        const organizations = await organization.getByNom(nodeName);
-        res.json({ personnes, organizations });
+        const personResults = await personne.getByNom(nodeName);
+
+        const organizationResults = await organization.getByNom(nodeName);
+
+        const combinedResults = {
+            nodes: [
+                ...personResults.map(person => ({ type: 'Personne', ...person })),
+                ...organizationResults.map(org => ({ type: 'Organization', ...org }))
+            ]
+        };
+
+        res.json(combinedResults);
     } catch (error) {
         console.error('Error searching nodes by name:', error);
-        res.status(500).json({ error: 'Error searching nodes by name.', details: error.message });
+        res.status(500).send('Error searching nodes');
     }
+
 };
