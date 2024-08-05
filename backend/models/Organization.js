@@ -15,23 +15,32 @@ class Organization {
         return `${year}-${month}-${day}`;
     }
 
-    async getAll(page = 0, limit = 10, name = '') {
+    async getAll(page = 0, limit = 10, name = '', ville = '', adresse = '', industry = '') {
         const session = this.driver.session();
         const offset = page * limit;
+    
         let query = `
             MATCH (o:Organization)
-            WHERE o.nom CONTAINS $name
+            WHERE 
+                ($name = '' OR toLower(o.nom) CONTAINS toLower($name)) AND
+                ($ville = '' OR toLower(o.ville) CONTAINS toLower($ville)) AND
+                ($adresse = '' OR toLower(o.adresse) CONTAINS toLower($adresse)) AND
+                ($industry = '' OR toLower(o.industry) CONTAINS toLower($industry))
             RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry, o.telephone as telephone, o.siteWeb as siteWeb,
                    o.createdAt as createdAt, o.updatedAt as updatedAt, o.uuid as uuid
             SKIP $offset LIMIT $limit
         `;
+    
         try {
             const result = await session.run(query, {
                 name,
+                ville,
+                adresse,
+                industry,
                 offset: neo4j.int(offset),
                 limit: neo4j.int(limit)
             });
-
+    
             const organizations = result.records.map(record => ({
                 id: record.get('id').toString(),
                 nom: record.get('nom') ? record.get('nom').toString() : null,
@@ -45,21 +54,25 @@ class Organization {
                 updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null),
                 uuid: record.get('uuid') ? record.get('uuid').toString() : null
             }));
-
+    
             const countResult = await session.run(`
                 MATCH (o:Organization)
-                WHERE o.nom CONTAINS $name
+                WHERE 
+                    ($name = '' OR toLower(o.nom) CONTAINS toLower($name)) AND
+                    ($ville = '' OR toLower(o.ville) CONTAINS toLower($ville)) AND
+                    ($adresse = '' OR toLower(o.adresse) CONTAINS toLower($adresse)) AND
+                    ($industry = '' OR toLower(o.industry) CONTAINS toLower($industry))
                 RETURN count(o) as total
-            `, { name });
-
+            `, { name, ville, adresse, industry });
+    
             const total = countResult.records[0].get('total').toNumber();
-
+    
             return { organizations, total };
         } finally {
             await session.close();
         }
     }
-
+    
     async getAllOrganizations() {
         const session = this.driver.session();
         try {

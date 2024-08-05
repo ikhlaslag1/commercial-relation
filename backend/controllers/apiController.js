@@ -12,11 +12,11 @@ const organization = new Organization(driver);
 const relation = new Relation(driver);
 
 exports.getAllOrganizations = async (req, res) => {
-    const { page = 0, limit = 10, name = '' } = req.query;
+    const { page = 0, limit = 10, name = '', city = '', address = '', industry = '' } = req.query;
 
     try {
         const organizationModel = new Organization(req.models.organization.driver);
-        const { organizations, total } = await organizationModel.getAll(parseInt(page), parseInt(limit), name);
+        const { organizations, total } = await organizationModel.getAll(parseInt(page), parseInt(limit), name, city, address, industry);
 
         res.json({ organizations, total });
     } catch (error) {
@@ -27,10 +27,10 @@ exports.getAllOrganizations = async (req, res) => {
 
 
 exports.getAllPersonnes = async (req, res) => {
-    const { page = 0, limit = 10, name = '' } = req.query;
+    const { page = 0, limit = 10, name = '', ville='',adresse= '',status='' } = req.query;
 
     try {
-       const { personnes, total } = await personne.getAll(parseInt(page), parseInt(limit), name);
+       const { personnes, total } = await personne.getAll(parseInt(page), parseInt(limit), name,ville,adresse,status);
         res.json({ personnes, total });
     } catch (error) {
         console.error('Error fetching personnes:', error);

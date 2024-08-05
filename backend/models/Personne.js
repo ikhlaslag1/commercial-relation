@@ -15,20 +15,28 @@ class Personne {
         return `${year}-${month}-${day}`;
     }
 
-    async getAll(page = 0, limit = 10, name = '') {
+    async getAll(page = 0, limit = 10, name = '', ville = '', adresse = '', status = '') {
         const session = this.driver.session();
         const offset = page * limit;
+    
         let query = `
             MATCH (p:Personne)
-            WHERE p.nom CONTAINS $name
+            WHERE ($name = '' OR toLower(p.nom) CONTAINS toLower($name))
+              AND ($ville = '' OR toLower(p.ville) CONTAINS toLower($ville))
+              AND ($adresse = '' OR toLower(p.adresse) CONTAINS toLower($adresse))
+              AND ($status = '' OR toLower(p.status) CONTAINS toLower($status))
             RETURN id(p) as id, p.nom as nom, p.age as age, p.ville as ville, p.status as status, 
                    p.email as email, p.telephone as telephone, p.adresse as adresse, 
                    p.createdAt as createdAt, p.updatedAt as updatedAt, p.uuid as uuid
             SKIP $offset LIMIT $limit
         `;
+    
         try {
             const result = await session.run(query, {
                 name,
+                ville,
+                adresse,
+                status,
                 offset: neo4j.int(offset),
                 limit: neo4j.int(limit)
             });
@@ -49,18 +57,24 @@ class Personne {
     
             const countResult = await session.run(`
                 MATCH (p:Personne)
-                WHERE p.nom CONTAINS $name
+                WHERE ($name = '' OR toLower(p.nom) CONTAINS toLower($name))
+                  AND ($ville = '' OR toLower(p.ville) CONTAINS toLower($ville))
+                  AND ($adresse = '' OR toLower(p.adresse) CONTAINS toLower($adresse))
+                  AND ($status = '' OR toLower(p.status) CONTAINS toLower($status))
                 RETURN count(p) as total
-            `, { name });
+            `, { name, ville, adresse, status });
     
             const total = countResult.records[0].get('total').toNumber();
     
             return { personnes, total };
+        } catch (error) {
+            console.error('Error fetching personnes:', error);
+            throw new Error('Error fetching personnes');
         } finally {
             await session.close();
         }
     }
-
+    
     async getAllPersons() {
         const session = this.driver.session();
         try {
