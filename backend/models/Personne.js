@@ -1,5 +1,6 @@
 const neo4j = require('neo4j-driver');
 const { v4: uuidv4 } = require('uuid');
+const xlsx = require('xlsx');
 
 class Personne {
     constructor(driver) {
@@ -96,7 +97,7 @@ class Personne {
     async create(nom, age, ville, status, email, telephone, adresse) {
         const session = this.driver.session();
         const currentTime = new Date().toISOString();
-        const uuid = uuidv4(); // Générer un UUID
+        const uuid = uuidv4();
         try {
             const result = await session.run(`
                 CREATE (p:Personne {uuid: $uuid, nom: $nom, age: $age, ville: $ville, status: $status, email: $email, telephone: $telephone, adresse: $adresse, createdAt: $currentTime, updatedAt: $currentTime})
@@ -107,6 +108,72 @@ class Personne {
             await session.close();
         }
     }
+    async importFromExcel(filePath) {
+        const session = this.driver.session();
+
+        try {
+            // Lire le fichier Excel
+            const workbook = xlsx.readFile(filePath);
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const data = xlsx.utils.sheet_to_json(sheet);
+
+            // Obtenir l'heure actuelle
+            const currentTime = new Date().toISOString();
+
+            // Traitement des données
+            for (const record of data) {
+                const {
+                    nom,
+                    age,
+                    ville,
+                    status,
+                    email,
+                    telephone,
+                    adresse,
+                    createdAt, // Si vous avez besoin d'utiliser ces dates pour autre chose, sinon, ignorez
+                    updatedAt
+                } = record;
+
+                const uuid = uuidv4(); // Générer un UUID pour chaque personne
+                const formattedCreatedAt = this.formatDate(createdAt || currentTime);
+                const formattedUpdatedAt = this.formatDate(updatedAt || currentTime);
+
+                // Exécuter la requête MERGE
+                await session.run(`
+                    MERGE (p:Personne {email: $email})
+                    SET p.uuid = $uuid,
+                        p.nom = $nom,
+                        p.age = $age,
+                        p.ville = $ville,
+                        p.status = $status,
+                        p.telephone = $telephone,
+                        p.adresse = $adresse,
+                        p.createdAt = $createdAt,
+                        p.updatedAt = $updatedAt
+                `, {
+                    uuid,
+                    nom,
+                    age,
+                    ville,
+                    status,
+                    email,
+                    telephone,
+                    adresse,
+                    createdAt: formattedCreatedAt,
+                    updatedAt: formattedUpdatedAt
+                });
+            }
+
+            console.log('Data import complete.');
+        } catch (error) {
+            console.error('Error importing data from Excel:', error);
+            throw new Error('Error importing data from Excel');
+        } finally {
+            await session.close();
+        }
+    }
+
 
     async update(id, nom, age, ville, status, email, telephone, adresse) {
         const session = this.driver.session();

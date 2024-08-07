@@ -10,6 +10,8 @@ const session = driver.session();
 
 const relation = new Relation(driver);
 
+
+
 async function getAllRelations(req, res) {
     try {
         const relations = await relation.getAllRelations();
@@ -41,7 +43,7 @@ async function addRelation(req, res) {
                 }
                 break;
             case 'ETUDE':
-                if (!params.person || !params.relatedOrganization || !params.domaine || !params.niveau) {
+                if (!params.person || !params.organization || !params.domaine || !params.niveau) {
                     return res.status(400).json({ error: 'Missing required fields for ETUDE' });
                 }
                 break;
@@ -71,6 +73,7 @@ async function addRelation(req, res) {
         res.status(500).json({ error: 'Erreur lors de la création de la relation' });
     }
 }
+
 
 async function getRelationById (req, res) {
     const { id } = req.params;
@@ -198,5 +201,7 @@ module.exports = {
     getAllPathsDFS,
     getAllPaths,
     getRelationDetails,
-    changeRelationType
+    changeRelationType,
+   
+    
 };

@@ -1,5 +1,5 @@
 const neo4j = require('neo4j-driver');
-
+const xlsx = require('xlsx');
 class Relation {
     constructor(driver) {
         this.driver = driver;
@@ -45,12 +45,12 @@ class Relation {
                     break;
                 case 'ETUDE':
                     query = `
-                        MATCH (p:Personne {nom: $person}), (o:Organization {nom: $organization})
+                        MATCH (p:Personne {nom: $person}), (o:Organization {nom: $relatedOrganization})
                         CREATE (p)-[:ETUDE {domaine: $domaine, niveau: $niveau}]->(o)
                     `;
                     queryParams = {
                         person: params.person,
-                        organization: params.relatedOrganization,
+                        relatedOrganization: params.relatedOrganization,
                         domaine: params.domaine,
                         niveau: params.niveau
                     };
@@ -103,8 +103,12 @@ class Relation {
             throw error;
         }
     }
+   
     
     
+   
+    
+      
     async updateRelation(id, updatedParams) {
         try {
           let query = '';

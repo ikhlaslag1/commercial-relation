@@ -1,4 +1,5 @@
 const neo4j = require('neo4j-driver');
+const xlsx = require('xlsx');
 const { v4: uuidv4 } = require('uuid');
 
 class Organization {
@@ -15,23 +16,30 @@ class Organization {
         return `${year}-${month}-${day}`;
     }
 
-    async getAll(page = 0, limit = 10, name = '', ville = '', adresse = '', industry = '') {
+    async withSession(callback) {
         const session = this.driver.session();
-        const offset = page * limit;
-    
-        let query = `
-            MATCH (o:Organization)
-            WHERE 
-                ($name = '' OR toLower(o.nom) CONTAINS toLower($name)) AND
-                ($ville = '' OR toLower(o.ville) CONTAINS toLower($ville)) AND
-                ($adresse = '' OR toLower(o.adresse) CONTAINS toLower($adresse)) AND
-                ($industry = '' OR toLower(o.industry) CONTAINS toLower($industry))
-            RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry, o.telephone as telephone, o.siteWeb as siteWeb,
-                   o.createdAt as createdAt, o.updatedAt as updatedAt, o.uuid as uuid
-            SKIP $offset LIMIT $limit
-        `;
-    
         try {
+            return await callback(session);
+        } finally {
+            await session.close();
+        }
+    }
+
+    async getAll(page = 0, limit = 10, name = '', ville = '', adresse = '', industry = '') {
+        return this.withSession(async session => {
+            const offset = page * limit;
+            const query = `
+                MATCH (o:Organization)
+                WHERE 
+                    ($name = '' OR toLower(o.nom) CONTAINS toLower($name)) AND
+                    ($ville = '' OR toLower(o.ville) CONTAINS toLower($ville)) AND
+                    ($adresse = '' OR toLower(o.adresse) CONTAINS toLower($adresse)) AND
+                    ($industry = '' OR toLower(o.industry) CONTAINS toLower($industry))
+                RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry, o.telephone as telephone, o.siteWeb as siteWeb,
+                       o.createdAt as createdAt, o.updatedAt as updatedAt, o.uuid as uuid
+                SKIP $offset LIMIT $limit
+            `;
+    
             const result = await session.run(query, {
                 name,
                 ville,
@@ -68,14 +76,11 @@ class Organization {
             const total = countResult.records[0].get('total').toNumber();
     
             return { organizations, total };
-        } finally {
-            await session.close();
-        }
+        });
     }
-    
+
     async getAllOrganizations() {
-        const session = this.driver.session();
-        try {
+        return this.withSession(async session => {
             const result = await session.run(`
                 MATCH (o:Organization)
                 RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.uuid as uuid
@@ -89,16 +94,13 @@ class Organization {
                 email: record.get('email') ? record.get('email').toString() : null,
                 uuid: record.get('uuid') ? record.get('uuid').toString() : null
             }));
-        } finally {
-            await session.close();
-        }
+        });
     }
 
     async create(nom, industry, adresse, email, telephone, siteWeb, ville) {
-        const session = this.driver.session();
-        const currentTime = new Date().toISOString();
-        const uuid = uuidv4(); // Générer un UUID
-        try {
+        return this.withSession(async session => {
+            const currentTime = new Date().toISOString();
+            const uuid = uuidv4(); 
             const result = await session.run(`
                 CREATE (o:Organization {
                     uuid: $uuid,
@@ -115,129 +117,157 @@ class Organization {
             `, { uuid, nom, industry, adresse, email, telephone, siteWeb, ville, currentTime });
     
             return result.records[0].get('id').toString();
-        } finally {
-            await session.close();
-        }
+        });
     }
 
+    async importOrganizationsFromExcel(filePath) {
+        return this.withSession(async session => {
+            // Read the Excel file
+            const workbook = xlsx.readFile(filePath);
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const data = xlsx.utils.sheet_to_json(sheet);
+            const currentTime = new Date().toISOString();
+            // Loop through each record in the Excel data
+            for (const record of data) {
+                const {
+                    nom,
+                    industry,
+                    adresse,
+                    email,
+                    telephone,
+                    siteWeb,
+                    ville,
+                    createdAt,
+                    updatedAt,
+                } = record;
+    
+                const uuid = uuidv4();
+                const formattedCreatedAt = this.formatDate(createdAt || currentTime);
+                const formattedUpdatedAt = this.formatDate(updatedAt || currentTime);
+
+                // Create or update Organization node based on email
+                await session.run(`
+                    MERGE (o:Organization {email: $email})
+                    SET o.uuid = $uuid,
+                        o.nom = $nom,
+                        o.industry = $industry,
+                        o.adresse = $adresse,
+                        o.telephone = $telephone,
+                        o.siteWeb = $siteWeb,
+                        o.ville = $ville,
+                        o.createdAt = $createdAt,
+                        o.updatedAt = $updatedAt
+                `, {
+                    uuid,
+                    nom,
+                    industry,
+                    adresse,
+                    email,
+                    telephone,
+                    siteWeb,
+                    ville,
+                    createdAt: formattedCreatedAt,
+                    updatedAt: formattedUpdatedAt
+                });
+            }
+    
+            console.log('Data import complete.');
+        });
+    }
+    
+
     async update(id, nom, industry, adresse, email, telephone, siteWeb, ville) {
-        const session = this.driver.session();
-        const currentTime = new Date().toISOString();
-        try {
+        return this.withSession(async session => {
+            const currentTime = new Date().toISOString();
             await session.run(`
-                MATCH (o:Organization)
-                WHERE id(o) = toInteger($id)
-                SET o.nom = $nom, o.industry = $industry, o.adresse = $adresse, o.email = $email, o.telephone = $telephone, o.siteWeb = $siteWeb, o.ville = $ville, o.updatedAt = $currentTime
-                RETURN o
-            `, { id, nom, industry, adresse, email, telephone, siteWeb, ville, currentTime });
-        } finally {
-            await session.close();
-        }
+                MATCH (o:Organization) WHERE id(o) = $id
+                SET o.nom = $nom, 
+                    o.industry = $industry, 
+                    o.adresse = $adresse, 
+                    o.email = $email, 
+                    o.telephone = $telephone, 
+                    o.siteWeb = $siteWeb, 
+                    o.ville = $ville,
+                    o.updatedAt = $currentTime
+            `, { id: neo4j.int(id), nom, industry, adresse, email, telephone, siteWeb, ville, currentTime });
+        });
     }
 
     async getByNom(nom) {
-        const session = this.driver.session();
-        try {
+        return this.withSession(async session => {
             const result = await session.run(`
-                MATCH (o:Organization)
-                WHERE toLower(o.nom) CONTAINS toLower($nom)
-                RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry, o.telephone as telephone, o.siteWeb as siteWeb,
-                       o.createdAt as createdAt, o.updatedAt as updatedAt, o.uuid as uuid
+                MATCH (o:Organization) WHERE toLower(o.nom) CONTAINS toLower($nom)
+                RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry, o.telephone as telephone, o.siteWeb as siteWeb
             `, { nom });
-            
-            return result.records.map(record => ({
-                id: record.get('id') ? record.get('id').toString() : null,
-                nom: record.get('nom') ? record.get('nom').toString() : null,
-                ville: record.get('ville') ? record.get('ville').toString() : null,
-                adresse: record.get('adresse') ? record.get('adresse').toString() : null,
-                industry: record.get('industry') ? record.get('industry').toString() : null,
-                email: record.get('email') ? record.get('email').toString() : null,
-                telephone: record.get('telephone') ? record.get('telephone').toString() : null,
-                siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null,
-                createdAt: this.formatDate(record.get('createdAt') ? record.get('createdAt').toString() : null),
-                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null),
-                uuid: record.get('uuid') ? record.get('uuid').toString() : null
-            }));
-        } finally {
-            await session.close();
-        }
-    }
     
-    
-
-    async getById(id) {
-        const session = this.driver.session();
-        try {
-            const result = await session.run(`
-                MATCH (o:Organization)
-                WHERE id(o) = toInteger($id)
-                RETURN id(o) as id, o.nom as nom, o.industry as industry, o.adresse as adresse, o.email as email, o.telephone as telephone, o.siteWeb as siteWeb, o.ville as ville,
-                       o.createdAt as createdAt, o.updatedAt as updatedAt, o.uuid as uuid
-            `, { id });
             return result.records.map(record => ({
                 id: record.get('id').toString(),
                 nom: record.get('nom') ? record.get('nom').toString() : null,
-                industry: record.get('industry') ? record.get('industry').toString() : null,
+                ville: record.get('ville') ? record.get('ville').toString() : null,
                 adresse: record.get('adresse') ? record.get('adresse').toString() : null,
+                industry: record.get('industry') ? record.get('industry').toString() : null,
                 email: record.get('email') ? record.get('email').toString() : null,
                 telephone: record.get('telephone') ? record.get('telephone').toString() : null,
-                siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null,
-                ville: record.get('ville') ? record.get('ville').toString() : null,
-                createdAt: this.formatDate(record.get('createdAt') ? record.get('createdAt').toString() : null),
-                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null),
-                uuid: record.get('uuid') ? record.get('uuid').toString() : null
-            }))[0];
-        } finally {
-            await session.close();
-        }
+                siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null
+            }));
+        });
+    }
+
+    async getById(id) {
+        return this.withSession(async session => {
+            const result = await session.run(`
+                MATCH (o:Organization) WHERE id(o) = $id
+                RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry, o.telephone as telephone, o.siteWeb as siteWeb
+            `, { id: neo4j.int(id) });
+    
+            const record = result.records[0];
+            if (record) {
+                return {
+                    id: record.get('id').toString(),
+                    nom: record.get('nom') ? record.get('nom').toString() : null,
+                    ville: record.get('ville') ? record.get('ville').toString() : null,
+                    adresse: record.get('adresse') ? record.get('adresse').toString() : null,
+                    industry: record.get('industry') ? record.get('industry').toString() : null,
+                    email: record.get('email') ? record.get('email').toString() : null,
+                    telephone: record.get('telephone') ? record.get('telephone').toString() : null,
+                    siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null
+                };
+            }
+            return null;
+        });
     }
 
     async delete(id) {
-        const session = this.driver.session();
-        try {
+        return this.withSession(async session => {
+            await this.deleteOrgRelationships(id);
             await session.run(`
-                MATCH (o:Organization)
-                WHERE id(o) = toInteger($id)
+                MATCH (o:Organization) WHERE id(o) = $id
                 DELETE o
             `, { id: neo4j.int(id) });
-        } finally {
-            await session.close();
-        }
+        });
     }
 
     async deleteOrgRelationships(nodeId) {
-        const session = this.driver.session();
-        const query = `
-            MATCH (p:Organization)-[r]-(others)
-            WHERE id(p) = toInteger($nodeId)
-            DELETE r
-        `;
-        try {
-            await session.run(query, { nodeId });
-        } finally {
-            await session.close();
-        }
+        return this.withSession(async session => {
+            await session.run(`
+                MATCH (o:Organization)-[r]-()
+                WHERE id(o) = $nodeId
+                DELETE r
+            `, { nodeId: neo4j.int(nodeId) });
+        });
     }
 
     async checkRelationships(id) {
-        const session = this.driver.session();
-        try {
+        return this.withSession(async session => {
             const result = await session.run(`
-                MATCH (o:Organization)
-                WHERE id(o) = toInteger($id)
-                OPTIONAL MATCH (o)-[r]->(others)  
-                OPTIONAL MATCH (o)<-[r]-(others)  
-                RETURN count(r) AS relationshipsCount
-            `, { id });
-
-            const relationshipsCount = result.records[0].get('relationshipsCount').toNumber();
-
-            return {
-                hasRelationships: relationshipsCount > 0
-            };
-        } finally {
-            await session.close();
-        }
+                MATCH (o:Organization)-[r]-()
+                WHERE id(o) = $id
+                RETURN COUNT(r) AS count
+            `, { id: neo4j.int(id) });
+    
+            return result.records[0].get('count').toNumber() > 0;
+        });
     }
 }
 

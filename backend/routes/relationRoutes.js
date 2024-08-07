@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
+
 const relationController = require('../controllers/relationController');
 
 
-router.get('/', relationController.getAllRelations);
+
 router.post('/add', relationController.addRelation);
 router.post('/:id', relationController.getRelationDetails);
 router.put('/update/:id', relationController.updateRelation);

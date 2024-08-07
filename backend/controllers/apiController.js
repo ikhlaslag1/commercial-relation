@@ -1,3 +1,7 @@
+
+const path = require('path');
+const xlsx = require('xlsx');
+
 const Organization = require('../models/Organization');
 const Personne = require('../models/Personne');
 const Relation = require('../models/Relation');
@@ -10,6 +14,7 @@ const driver = neo4j.driver(uri, neo4j.auth.basic(user, password));
 const personne = new Personne(driver);
 const organization = new Organization(driver);
 const relation = new Relation(driver);
+
 
 exports.getAllOrganizations = async (req, res) => {
     const { page = 0, limit = 10, name = '', city = '', address = '', industry = '' } = req.query;
@@ -35,6 +40,197 @@ exports.getAllPersonnes = async (req, res) => {
     } catch (error) {
         console.error('Error fetching personnes:', error);
         res.status(500).json({ error: 'Error fetching personnes.', details: error.message });
+    }
+};
+
+exports.uploadFiles = async (req, res) => {
+    try {
+        const personFiles = req.files.personFiles || [];
+        const organizationFiles = req.files.organizationFiles || [];
+        const { relationType, relationDetails } = req.body;
+
+        // Import Person Data
+        for (const file of personFiles) {
+            const filePath = path.resolve(file.path);
+            const workbook = xlsx.readFile(filePath);
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const data = xlsx.utils.sheet_to_json(sheet);
+
+            const hasAgeProperty = data.every(record => 'age' in record);
+            if (!hasAgeProperty) {
+                return res.status(400).send('File does not contain required "age" property.');
+            }
+
+            await personne.importFromExcel(filePath);
+
+            // Create Relations for Persons
+            await createRelationsForPersons(relationType, relationDetails, data);
+        }
+
+        // Import Organization Data
+        for (const file of organizationFiles) {
+            const filePath = path.resolve(file.path);
+            const workbook = xlsx.readFile(filePath);
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const data = xlsx.utils.sheet_to_json(sheet);
+
+            const hasIndustryProperty = data.every(record => 'industry' in record);
+            if (!hasIndustryProperty) {
+                return res.status(400).send('File does not contain required "industry" property.');
+            }
+
+            await organization.importOrganizationsFromExcel(filePath);
+
+            // Create Relations for Organizations (if needed)
+            await createRelationsForOrganizations(relationType, relationDetails, data);
+        }
+
+        res.status(200).send('Files uploaded and processed successfully.');
+    } catch (error) {
+        console.error('Error processing files:', error);
+        res.status(500).send('Error processing files.');
+    }
+};
+async function createRelationsForPersons(relationType, relationDetailsString, data) {
+    const relationDetails = JSON.parse(relationDetailsString);
+    for (const person of data) {
+
+        if (relationType === 'TRAVAILLE') {
+            if (relationDetails.relatedOrganization && relationDetails.position) {
+                await relation.createRelation({
+                    type: 'TRAVAILLE',
+                    params: {
+                        person: person.nom,
+                        relatedOrganization: relationDetails.relatedOrganization,
+                        position: relationDetails.position
+                    }
+                });
+            } else {
+                console.error(` error : person: ${person.nom}. Relation details: ${JSON.stringify(relationDetails)}`);
+            }
+        }if (relationType === 'ETUDE') {
+            if (relationDetails.organization && relationDetails.domaine && relationDetails.niveau) {
+                await relation.createRelation({
+                    type: 'ETUDE',
+                    params: {
+                        person: person.nom,
+                        relatedOrganization: relationDetails.organization,
+                        domaine: relationDetails.domaine,
+                        niveau: relationDetails.niveau
+                    }
+                });
+            } else {
+                console.error(` error : person: ${person.nom}. Relation details: ${JSON.stringify(relationDetails)}`);
+            }
+        } if (relationType === 'FAMILLE') {
+            if (relationDetails.relatedPerson && relationDetails.type) {
+                await relation.createRelation({
+                    type: 'FAMILLE',
+                    params: {
+                        person: person.nom,
+                        relatedPerson: relationDetails.relatedPerson,
+                        type: relationDetails.type,
+                       
+                    }
+                });
+            } else {
+                console.error(` error : person: ${person.nom}. Relation details: ${JSON.stringify(relationDetails)}`);
+            }
+        } if (relationType === 'AMITIE') {
+            if (relationDetails.relatedPerson ) {
+                await relation.createRelation({
+                    type: 'AMITIE',
+                    params: {
+                        person: person.nom,
+                        relatedPerson: relationDetails.relatedPerson,
+                        
+                       
+                    }
+                });
+            } else {
+                console.error(` error : person: ${person.nom}. Relation details: ${JSON.stringify(relationDetails)}`);
+            }
+        }
+        
+    }
+}
+async function createRelationsForOrganizations(relationType, relationDetailsString,data) {
+    const relationDetails = JSON.parse(relationDetailsString);
+    for (const org of data) {
+        if (relationType === 'COLLABORATION') {
+        if (relationDetails.relatedOrganization) {
+            await relation.createRelation({
+                type: 'COLLABORATION', 
+                params: {
+                    organization: org.nom, 
+                    relatedOrganization: relationDetails.relatedOrganization,
+                    projet: relationDetails.projet,
+                    role:relationDetails.role
+                }
+            
+            });
+        }
+        } else {
+            console.error(` error : person: ${org.nom}. Relation details: ${JSON.stringify(relationDetails)}`);
+        }
+    }
+}
+
+exports.addPersonList = async (req, res) => {
+    try {
+        for (const file of req.files) {
+            const filePath = path.resolve(file.path);
+            console.log('Resolved file path:', filePath);
+
+            // Read and validate the Excel file
+            const workbook = xlsx.readFile(filePath);
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const data = xlsx.utils.sheet_to_json(sheet);
+
+            // Check if 'age' property exists in the data
+            const hasAgeProperty = data.every(record => 'age' in record);
+
+            if (!hasAgeProperty) {
+                console.error('File does not contain required "age" property.');
+                return res.status(400).send('File does not contain required "age" property.');
+            }
+
+            // If valid, proceed with importing the file
+            await personne.importFromExcel(filePath);
+        }
+        res.status(200).send('Import successful');
+    } catch (error) {
+        console.error('Import failed:', error);
+        res.status(500).send('Import failed');
+    }
+};
+exports.addOrgList = async (req, res) => {
+    try {
+        for (const file of req.files) {
+            const filePath = path.resolve(file.path);
+            console.log('Resolved file path:', filePath);
+
+             // Read and validate the Excel file
+             const workbook = xlsx.readFile(filePath);
+             const sheetName = workbook.SheetNames[0];
+             const sheet = workbook.Sheets[sheetName];
+             const data = xlsx.utils.sheet_to_json(sheet);
+
+             const hasIndustryProperty = data.every(record => 'industry' in record);
+             if (!hasIndustryProperty) {
+                console.error('File does not contain required "industry" property.');
+                return res.status(400).send('File does not contain required "age" property.');
+            }
+
+            await organization.importOrganizationsFromExcel(filePath);
+        }
+        res.status(200).send('Import successful');
+    } catch (error) {
+        console.error('Import failed:', error);
+        res.status(500).send('Import failed');
     }
 };
 
