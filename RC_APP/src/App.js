@@ -2,13 +2,14 @@ import React from 'react';
 import Home from "./pages/Home";
 import Nodes from "./pages/Node";
 import OrganizationList from "./pages/Organization";
-import NodeDetails from "./pages/relations";
+import NodeDetails from "./pages/relationsDetails";
 import AddNode from "./pages/addNode"; 
 import EditNode from "./pages/editNode";
 import EditOrg from "./pages/editOrg";
 import AssociateNode from "./pages/Associate";
 import AddOrganization from "./pages/addOrganization";
 import Search from './pages/searchRelation';
+import Relation from './pages/Relation';
 import { Routes, Route, BrowserRouter } from "react-router-dom";
 import EditRelation from './pages/editRelation';
 
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/Organization" element={<OrganizationList />} />
         <Route path="/associate/:id/:type" element={<AssociateNode />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/Relations" element={<Relation />} />
       </Routes>
     </BrowserRouter>
   );

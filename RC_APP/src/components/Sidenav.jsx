@@ -15,10 +15,10 @@ import ListItemText from '@mui/material/ListItemText';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import RelationsIcon from '@mui/icons-material/Group';
 import NodeIcon from '@mui/icons-material/AccountTree';
+import BusinessIcon from '@mui/icons-material/Business';
 import { useNavigate } from 'react-router-dom';
-import PathoraLogo from '../images/logo.png'; // Assurez-vous que le chemin du logo est correct
-import NameImage from '../images/name.png'; // Assurez-vous que le chemin de l'image est correct
-
+import PathoraLogo from '../images/logo.png'; 
+import NameImage from '../images/name.png'; 
 const drawerWidth = 240;
 
 const openedMixin = (theme) => ({
@@ -112,7 +112,7 @@ export default function Sidenav() {
         </DrawerHeader>
         <Divider />
         <List>
-          <ListItem disablePadding sx={{ display: 'block' }} onClick={() => navigate("/search")}>
+          <ListItem disablePadding sx={{ display: 'block' }} onClick={() => navigate("/Relations")}>
             <ListItemButton
               sx={{
                 minHeight: 48,
@@ -127,12 +127,13 @@ export default function Sidenav() {
                   justifyContent: 'center',
                 }}
               >
-                <ManageSearchIcon />
+                <NodeIcon />
               </ListItemIcon>
-              <ListItemText primary="Search Relations" sx={{ opacity: open ? 1 : 0 }} />
+              <ListItemText primary="Relation" sx={{ opacity: open ? 1 : 0 }} />
             </ListItemButton>
           </ListItem>
         </List>
+       
         <List>
           <ListItem disablePadding sx={{ display: 'block' }} onClick={() => navigate("/Personne")}>
             <ListItemButton
@@ -171,9 +172,31 @@ export default function Sidenav() {
                   justifyContent: 'center',
                 }}
               >
-                <NodeIcon />
+                <BusinessIcon />
               </ListItemIcon>
               <ListItemText primary="Organization" sx={{ opacity: open ? 1 : 0 }} />
+            </ListItemButton>
+          </ListItem>
+        </List>
+        <List>
+          <ListItem disablePadding sx={{ display: 'block' }} onClick={() => navigate("/search")}>
+            <ListItemButton
+              sx={{
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? 3 : 'auto',
+                  justifyContent: 'center',
+                }}
+              >
+                <ManageSearchIcon />
+              </ListItemIcon>
+              <ListItemText primary="Path Search" sx={{ opacity: open ? 1 : 0 }} />
             </ListItemButton>
           </ListItem>
         </List>
