@@ -111,12 +111,12 @@ async function createRelationsForPersons(relationType, relationDetailsString, da
                 console.error(` error : person: ${person.nom}. Relation details: ${JSON.stringify(relationDetails)}`);
             }
         }if (relationType === 'ETUDE') {
-            if (relationDetails.organization && relationDetails.domaine && relationDetails.niveau) {
+            if (relationDetails.relatedOrganization && relationDetails.domaine && relationDetails.niveau) {
                 await relation.createRelation({
                     type: 'ETUDE',
                     params: {
                         person: person.nom,
-                        relatedOrganization: relationDetails.organization,
+                        relatedOrganization: relationDetails.relatedOrganization,
                         domaine: relationDetails.domaine,
                         niveau: relationDetails.niveau
                     }
