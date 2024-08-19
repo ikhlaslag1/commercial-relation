@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
+import MDBox from "./MDBox/index.js";
 import {
   Paper,
   Typography,
@@ -19,11 +20,21 @@ import {
   List,
   ListItem,
   ListItemText,
-  Card
+  Card, Box
 } from "@mui/material";
+import ComplexStatisticsCard from "./ComplexStatisticsCard";
+import AppCurrentVisits from './app-current-visits';
+import AppNewsUpdate from './app-news-update';
+import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
+import WorkIcon from '@mui/icons-material/Work';
+import GroupsIcon from '@mui/icons-material/Groups';
+import HandshakeIcon from '@mui/icons-material/Handshake';
+import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import { SystemUpdateAlt as SystemUpdateAltIcon } from "@mui/icons-material";
 import SearchIcon from '@mui/icons-material/Search';
+import SchoolIcon from '@mui/icons-material/School'; 
 import { useNavigate } from "react-router-dom";
+
 
 export default function Relations() {
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
@@ -36,6 +47,9 @@ export default function Relations() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
+  const [relationCounts, setRelationCounts] = useState([]);
+  const [chartData, setChartData] = useState([]);
+  const [list, setNewsList] = useState([]);
   const navigate = useNavigate();
 
   const handleFileChange = (event) => {
@@ -48,7 +62,7 @@ export default function Relations() {
       }
     }
   };
-
+  const newsList = [ ];
   const handleRelationChange = (event) => {
     const { name, value } = event.target;
     setRelationDetails((prevDetails) => ({
@@ -86,7 +100,53 @@ export default function Relations() {
       setMessage('Error uploading files.');
     }
   };
+  const fetchData = async () => {
+    try {
+      // Fetch relation counts
+      const relationResponse = await fetch('http://localhost:5000/relations/count');
+      const relationResult = await relationResponse.json();
+      
+      if (relationResponse.ok) {
+        setRelationCounts(relationResult.data);
+      } else {
+        console.error('Failed to fetch relation counts:', relationResult.message);
+      }
 
+      // Fetch chart data
+      const chartResponse = await fetch('http://localhost:5000/relations/relation-counts');
+      const chartResult = await chartResponse.json();
+
+      if (chartResponse.ok) {
+
+        const transformedData = [
+          { label: 'Person to Person', value: chartResult.personPerson || 0 },
+          { label: 'Organization to Organization', value: chartResult.organizationOrganization || 0 },
+          { label: 'Person to Organization', value: chartResult.personOrganization || 0 },
+        ];
+        setChartData(transformedData);
+      } else {
+        console.error('Failed to fetch chart data:', chartResult.message);
+      }
+       const ListResponse = await fetch('http://localhost:5000/relations/latest');
+            if (!ListResponse.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await ListResponse.json();
+            setNewsList(data);
+       
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+const getRelationCount = (type) => {
+  const relation = relationCounts.find(rel => rel.relationType === type);
+  return relation ? relation.count : 0;
+};
   const handleCloseUploadDialog = () => {
     setOpenUploadDialog(false);
     setPersonFiles([]);
@@ -134,36 +194,105 @@ export default function Relations() {
     setSearchResults([]);
   };
 
+  
   return (
     <Paper sx={{ width: "98%", overflow: "hidden", padding: "12px" }}>
-      <Typography gutterBottom variant="h5" component="div" sx={{ padding: "20px", display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 30 }}>
-        <strong>Relations</strong>
+    <Typography
+      gutterBottom
+      variant="h5"
+      component="div"
+      sx={{ padding: "20px", display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 30 }}
+    >
+      <strong>Relations</strong>
+    </Typography>
+    <IconButton
+      color="black"
+      onClick={handleOpenUploadDialog}
+      aria-label="import"
+      sx={{
+        marginLeft: "20px",
+        marginTop: "-20px",
+        marginBottom: "20px",
+        display: 'flex',
+        alignItems: 'center',
+        padding: 0,
+        backgroundColor: 'transparent',
+        borderRadius: '4px',
+        '&:hover': {
+          backgroundColor: 'primary',
+        },
+      }}
+    >
+      <SystemUpdateAltIcon sx={{ fontSize: 20, marginRight: '8px' }} />
+      <Typography variant="body2" sx={{ fontSize: 16, color: 'black' }}>
+        Import
       </Typography>
-      <IconButton
-        color="black"
-        onClick={handleOpenUploadDialog}
-        aria-label="import"
-        sx={{
-          marginLeft: "20px",
-          marginTop: "-20px",
-          marginBottom: "20px",
-          display: 'flex',
-          alignItems: 'center',
-          padding: 0,
-          backgroundColor: 'transparent',
-          borderRadius: '4px',
-          '&:hover': {
-            backgroundColor: 'primary',
-          },
-        }}
-      >
-        <SystemUpdateAltIcon sx={{ fontSize: 20, marginRight: '8px' }} />
-        <Typography variant="body2" sx={{ fontSize: 16, color: 'black' }}>
-          Import
-        </Typography>
-      </IconButton>
-
-      <Divider />
+    </IconButton>
+    <Divider />
+  
+    <MDBox display="flex" flexWrap="wrap"marginTop='20px' gap={2}>
+      <ComplexStatisticsCard
+        color="error"
+        IconComponent={FamilyRestroomIcon}
+        title="Family "
+        count={getRelationCount('FAMILLE')}
+       
+      />
+      <ComplexStatisticsCard
+      color="secondary"
+        IconComponent={WorkIcon}
+        title="Work "
+        count={getRelationCount('TRAVAILLE')}
+       
+      />
+      <ComplexStatisticsCard
+      color="info"
+        IconComponent={GroupsIcon}
+        title="Friendship "
+        count={getRelationCount('AMITIE')}
+       
+      />
+      <ComplexStatisticsCard
+       color="success"
+        IconComponent={HandshakeIcon}
+        title="Collaboration "
+        count={getRelationCount('COLLABORATION')}
+       
+      />
+        <ComplexStatisticsCard
+        color="warning"
+        IconComponent={SchoolIcon}
+        title="Study "
+        count={getRelationCount('COLLABORATION')}
+        
+      />
+      <ComplexStatisticsCard
+      color="black"
+        IconComponent={LeaderboardIcon}
+        title="Total"
+        count={relationCounts.reduce((acc, rel) => acc + rel.count, 0)}
+       
+      />
+      </MDBox>
+       <Divider />
+       <Box display="flex" gap={2}>
+     
+      <Box width="65%" marginTop={2}>
+        <AppNewsUpdate
+          title="Latest Relations"
+          subheader=""
+          list={list}
+        />
+      </Box>
+      <Box width="35%" marginTop={2}>
+        <AppCurrentVisits
+          title={<Typography variant="h6" sx={{ fontSize: '1.2rem' }}>Overview of Relationship Types</Typography>}
+          chart={{
+            series: chartData,
+          }}
+        />
+      </Box>
+    </Box>
 
       <Dialog open={openUploadDialog} onClose={handleCloseUploadDialog} fullWidth>
         <DialogTitle>Import Data</DialogTitle>

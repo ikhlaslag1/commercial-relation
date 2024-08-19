@@ -11,7 +11,7 @@ export default function Relation() {
         <Sidenav/>
         <Box sx={{ flexGrow: 1, p: 3 }}>
         <Relations />
-        </Box>
+         </Box>
       </Box>
     </>
   );
