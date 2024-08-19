@@ -6,23 +6,29 @@ class Relation {
         this.session = this.driver.session();
     }
 
-    async getAllRelations() {
-        try {
-            const result = await this.session.run(`
-                MATCH ()-[r]->()
-                RETURN type(r) as type, r
-            `);
+async getAllRelations() {
+    const newSession = this.driver.session(); 
+    try {
+        const result = await newSession.run(`
+            MATCH (from)-[r]->(to)
+            RETURN from.nom AS fromName, to.nom AS toName, type(r) AS type, r.date AS date
+            ORDER BY r.id DESC
+            LIMIT 5
+        `);
 
-            return result.records.map(record => ({
-                type: record.get('type'),
-                details: record.get('r').properties
-            }));
-        } catch (error) {
-            throw error;
-        } finally {
-            await this.session.close();
-        }
+        return result.records.map(record => ({
+            from: record.get('fromName'),
+            to: record.get('toName'),
+            type: record.get('type'),
+            date: record.get('date')
+        }));
+    } catch (error) {
+        throw error;
+    } finally {
+        newSession.close(); 
     }
+}
+
 
     async createRelation(relation) {
         const { type, params } = relation;
@@ -35,7 +41,7 @@ class Relation {
                 case 'TRAVAILLE':
                     query = `
                         MATCH (p:Personne {nom: $person}), (o:Organization {nom: $relatedOrganization})
-                        CREATE (p)-[:TRAVAILLE {position: $position}]->(o)
+                        CREATE (p)-[:TRAVAILLE {position: $position,date: date()}]->(o)
                     `;
                     queryParams = {
                         person: params.person,
@@ -46,7 +52,7 @@ class Relation {
                 case 'ETUDE':
                     query = `
                         MATCH (p:Personne {nom: $person}), (o:Organization {nom: $relatedOrganization})
-                        CREATE (p)-[:ETUDE {domaine: $domaine, niveau: $niveau}]->(o)
+                        CREATE (p)-[:ETUDE {domaine: $domaine, niveau: $niveau,date: date()}]->(o)
                     `;
                     queryParams = {
                         person: params.person,
@@ -58,7 +64,7 @@ class Relation {
                 case 'FAMILLE':
                     query = `
                         MATCH (p1:Personne {nom: $person}), (p2:Personne {nom: $relatedPerson})
-                        CREATE (p1)-[:FAMILLE {type: $type}]->(p2)
+                        CREATE (p1)-[:FAMILLE {type: $type,date: date()}]->(p2)
                     `;
                     queryParams = {
                         person: params.person,
@@ -69,7 +75,7 @@ class Relation {
                 case 'COLLABORATION':
                     query = `
                         MATCH (o1:Organization {nom: $organization}), (o2:Organization {nom: $relatedOrganization})
-                        CREATE (o1)-[:COLLABORATION {projet: $projet, role: $role}]->(o2)
+                        CREATE (o1)-[:COLLABORATION {projet: $projet, role: $role, date: date()}]->(o2)
                     `;
                     queryParams = {
                         organization: params.organization,
@@ -81,7 +87,7 @@ class Relation {
                 case 'AMITIE':
                     query = `
                         MATCH (p1:Personne {nom: $person}), (p2:Personne {nom: $relatedPerson})
-                        CREATE (p1)-[:AMITIE]->(p2), (p2)-[:AMITIE]->(p1)
+                        CREATE (p1)-[:AMITIE {date: date()}]->(p2), (p2)-[:AMITIE {date: date()}]->(p1)
                     `;
                     queryParams = {
                         person: params.person,
@@ -96,17 +102,67 @@ class Relation {
             console.log('With parameters:', queryParams);
     
             const result = await this.session.run(query, queryParams);
-            console.log('Query result:', result); // Optional: Log result to confirm execution
+            console.log('Query result:', result); 
     
         } catch (error) {
             console.error('Error executing query:', error);
             throw error;
         }
     }
-   
+    async  getRelationCountsFromDB() {
+        try {
+            const queries = {
+                personPerson: `
+                    MATCH (p1:Personne)-[r]-(p2:Personne)
+                    RETURN count(r) AS count
+                `,
+                organizationOrganization: `
+                    MATCH (o1:Organization)-[r]-(o2:Organization)
+                    RETURN count(r) AS count
+                `,
+                personOrganization: `
+                    MATCH (p:Personne)-[r]-(o:Organization)
+                    RETURN count(r) AS count
+                `
+            };
+    
+            const results = {};
+            for (const [key, query] of Object.entries(queries)) {
+                const result = await this.session.run(query);
+                results[key] = result.records[0].get('count').toInt();
+            }
+    
+            return results;
+        } catch (error) {
+            console.error('Error executing query:', error);
+            throw error;  
+        }
+    }
     
     
-   
+    async countRelations() {
+        const session = this.driver.session();
+        try {
+            const result = await session.run(`
+                MATCH ()-[r]->() 
+                RETURN type(r) AS relationType, count(r) AS count
+            `);
+            console.log('Query Result:', result.records); 
+            
+            const counts = result.records.map(record => ({
+                relationType: record.get('relationType'),
+                count: record.get('count').toNumber(),
+            }));
+            
+            return counts;
+        } catch (error) {
+            console.error('Error counting relations:', error.message);
+            throw error;
+        } finally {
+            await session.close();
+        }
+    }
+    
     
       
     async updateRelation(id, updatedParams) {
@@ -151,7 +207,7 @@ class Relation {
               queryParams.role = updatedParams.relationshipProperties.role;
               break;
             case 'AMITIE':
-              query = ''; // Handle 'AMITIE' if needed
+              query = '';
               break;
             default:
               throw new Error(`Type de relation non pris en charge: ${updatedParams.type}`);
@@ -370,14 +426,20 @@ class Relation {
         }
     }
 
-    async getAllShortedPath(nodeUuid1, nodeUuid2) {
+    async getAllShortedPath(nodeUuid1, nodeUuid2, relationshipTypes = []) {
         const session = this.driver.session();
+        
         try {
+             const relationshipCondition = relationshipTypes.length > 0
+                ? `ALL(r IN relationships(p) WHERE type(r) IN $relationshipTypes)`
+                : `true`; 
+    
             const result = await session.run(
                 `MATCH p=allShortestPaths((a)-[*]-(b))
                  WHERE a.uuid = $nodeUuid1 AND b.uuid = $nodeUuid2
+                 AND ${relationshipCondition}
                  RETURN p`,
-                { nodeUuid1, nodeUuid2 }
+                { nodeUuid1, nodeUuid2, relationshipTypes }
             );
     
             return result.records.map(record => {
@@ -398,17 +460,25 @@ class Relation {
         }
     }
     
-    async getAllPaths(nodeUuid1, nodeUuid2) {
+    async getAllPaths(nodeUuid1, nodeUuid2, relationshipTypes = []) {
         const session = this.driver.session();
+    
         try {
-            const result = await session.run(`
-                MATCH path = (a)-[*]-(b)  
-                WHERE a.uuid = $nodeUuid1 AND b.uuid = $nodeUuid2
-                RETURN path
-            `, { nodeUuid1, nodeUuid2 });
+            const relationshipCondition = relationshipTypes.length > 0
+                ? `ALL(r IN relationships(p) WHERE type(r) IN $relationshipTypes)`
+                : `true`;
+    
+            const result = await session.run(
+                `MATCH p=((a)-[*]-(b))
+                 WHERE a.uuid = $nodeUuid1 AND b.uuid = $nodeUuid2
+                 AND ${relationshipCondition} 
+                 RETURN p
+                 LIMIT 1000`,
+                { nodeUuid1, nodeUuid2, relationshipTypes }
+            );
     
             return result.records.map(record => {
-                const path = record.get('path');
+                const path = record.get('p');
                 return {
                     nodes: path.segments.map(segment => ({
                         start: segment.start.properties,
@@ -420,44 +490,39 @@ class Relation {
                     }))
                 };
             });
+        } catch (error) {
+            console.error('Error fetching all paths:', error);
+            throw error;
         } finally {
             await session.close();
         }
     }
     
     
-    async getAllPathsDFS (nodeName1, nodeName2) {
+    async getFilteredRelations (types) {
         const session = this.driver.session();
         try {
-            const result = await session.run(`
-                WITH $nodeName1 AS nodeName1, $nodeName2 AS nodeName2
-                MATCH (n1 {nom: nodeName1}), (n2 {nom: nodeName2})
-                WITH id(n1) AS nodeId1, id(n2) AS nodeId2
-                CALL gds.dfs.stream('myGraph', {
-                    sourceNode: nodeId1,
-                    targetNodes: [nodeId2]
-                })
-                YIELD path
-                RETURN path
-            `, { nodeName1, nodeName2 });
+            const result = await session.run(
+                `
+                MATCH p=(start)-[r]->(end)
+                WHERE ALL(rel IN relationships(p) WHERE rel.type IN $types)
+                RETURN p
+                `,
+                { types }
+            );
     
-            return result.records.map(record => {
-                const path = record.get('path');
-                return {
-                    nodes: path.segments.map(segment => ({
-                        start: segment.start.properties,
-                        end: segment.end.properties
-                    })),
-                    relationships: path.segments.map(segment => ({
-                        type: segment.relationship.type,
-                        properties: segment.relationship.properties
-                    }))
-                };
+            const paths = result.records.map(record => {
+                return record.get('p'); // Transformer le résultat selon vos besoins
             });
+    
+            return paths;
+        } catch (error) {
+            console.error('Erreur lors de la récupération des relations filtrées:', error);
+            throw error;
         } finally {
             await session.close();
         }
-    }
+    };
     
 
 }

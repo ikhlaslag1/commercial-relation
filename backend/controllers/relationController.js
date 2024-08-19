@@ -73,6 +73,16 @@ async function addRelation(req, res) {
         res.status(500).json({ error: 'Erreur lors de la création de la relation' });
     }
 }
+async function countRelations(req, res) {
+    try {
+        const counts = await relation.countRelations();
+        return res.status(200).json({ success: true, data: counts });
+    } catch (error) {
+        console.error('Error counting relations:', error.message);
+        console.error('Stack trace:', error.stack);
+        return res.status(500).json({ success: false, message: 'Server Error' });
+    }
+}
 
 
 async function getRelationById (req, res) {
@@ -137,12 +147,15 @@ async function changeRelationType(req, res) {
 
 async function getAllRelationsBetweenNodes(req, res) {
     const { nodeUuid1, nodeUuid2 } = req.params;
+    const { relationshipTypes } = req.body; 
 
     try {
         console.log('nodeUuid1:', nodeUuid1);
         console.log('nodeUuid2:', nodeUuid2);
+        console.log('relationshipTypes:', relationshipTypes);
 
-        const paths = await relation.getAllShortedPath(nodeUuid1, nodeUuid2);
+        const paths = await relation.getAllShortedPath(nodeUuid1, nodeUuid2, relationshipTypes || []);
+
         res.json(paths);
     } catch (error) {
         console.error('Error fetching relations between nodes:', error);
@@ -153,9 +166,14 @@ async function getAllRelationsBetweenNodes(req, res) {
 
 async function getAllPaths(req, res) {
     const { nodeUuid1, nodeUuid2 } = req.params;
+    const { relationshipTypes } = req.body; 
 
     try {
-        const paths = await relation.getAllPaths(nodeUuid1, nodeUuid2);
+        console.log('nodeUuid1:', nodeUuid1);
+        console.log('nodeUuid2:', nodeUuid2);
+        console.log('relationshipTypes:', relationshipTypes);
+
+        const paths = await relation.getAllPaths(nodeUuid1, nodeUuid2, relationshipTypes || []);
         res.json(paths);
     } catch (error) {
         console.error('Error fetching all paths:', error);
@@ -164,22 +182,18 @@ async function getAllPaths(req, res) {
 }
 
 
-const getAllPathsDFS = async (req, res) => {
-    const { nodeName1, nodeName2 } = req.params;
-
+const getRelationCounts = async (req, res) => {
     try {
-        const paths = await relation.getAllPathsDFS(nodeName1, nodeName2);
-        res.json(paths);
+        const counts = await relation.getRelationCountsFromDB(); 
+        res.status(200).json(counts); 
     } catch (error) {
-        console.error('Error getting DFS paths:', error);
-        res.status(500).send('Error getting DFS paths');
+        console.error('Error in getRelationCounts controller:', error);
+        res.status(500).json({ error: 'Internal Server Error' }); 
     }
 };
-
-
 const deleteRelation= async(req, res)=> {
     const { relationId } = req.params; 
-    const { type } = req.body; 
+    const { type } = req.query; 
   
     try {
       await relation.deleteRelation(relationId, type);
@@ -190,7 +204,17 @@ const deleteRelation= async(req, res)=> {
     }
   }
   
+  const getFilteredRelations = async (req, res) => {
+    const { types } = req.body;
 
+    try {
+        const filteredRelations = await relation.getFilteredRelations(types);
+        res.json(filteredRelations);
+    } catch (error) {
+        console.error('Erreur lors de la récupération des relations filtrées:', error);
+        res.status(500).send('Erreur du serveur');
+    }
+};
 module.exports = {
     getAllRelations,
     addRelation,
@@ -198,10 +222,12 @@ module.exports = {
     deleteRelation,
     getRelationById,
     getAllRelationsBetweenNodes,
-    getAllPathsDFS,
     getAllPaths,
     getRelationDetails,
     changeRelationType,
+    countRelations,
+    getRelationCounts,
+    getFilteredRelations
    
     
 };

@@ -198,7 +198,8 @@ class Organization {
         return this.withSession(async session => {
             const result = await session.run(`
                 MATCH (o:Organization) WHERE toLower(o.nom) CONTAINS toLower($nom)
-                RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry, o.telephone as telephone, o.siteWeb as siteWeb
+                RETURN id(o) as id, o.nom as nom, o.ville as ville, o.adresse as adresse, o.email as email, o.industry as industry, o.telephone as telephone, o.siteWeb as siteWeb,
+                  o.createdAt as createdAt, o.updatedAt as updatedAt, o.uuid as uuid
             `, { nom });
     
             return result.records.map(record => ({
@@ -209,7 +210,10 @@ class Organization {
                 industry: record.get('industry') ? record.get('industry').toString() : null,
                 email: record.get('email') ? record.get('email').toString() : null,
                 telephone: record.get('telephone') ? record.get('telephone').toString() : null,
-                siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null
+                siteWeb: record.get('siteWeb') ? record.get('siteWeb').toString() : null,
+                createdAt: this.formatDate(record.get('createdAt') ? record.get('createdAt').toString() : null),
+                updatedAt: this.formatDate(record.get('updatedAt') ? record.get('updatedAt').toString() : null),
+                uuid: record.get('uuid') ? record.get('uuid').toString() : null
             }));
         });
     }
